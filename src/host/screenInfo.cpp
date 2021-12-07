@@ -31,7 +31,7 @@ using namespace Microsoft::Console::VirtualTerminal;
 
 SCREEN_INFORMATION::SCREEN_INFORMATION(
     _In_ IWindowMetrics* pMetrics,
-    _In_ IAccessibilityNotifier* pNotifier,
+    _In_ Win32::AccessibilityNotifier* pNotifier,
     const TextAttribute popupAttributes,
     const FontInfo fontInfo) :
     OutputMode{ ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT },
@@ -105,7 +105,7 @@ SCREEN_INFORMATION::~SCREEN_INFORMATION()
         IWindowMetrics* pMetrics = ServiceLocator::LocateWindowMetrics();
         THROW_HR_IF_NULL(E_FAIL, pMetrics);
 
-        IAccessibilityNotifier* pNotifier = ServiceLocator::LocateAccessibilityNotifier();
+        const auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
         // It is possible for pNotifier to be null and that's OK.
         // For instance, the PTY doesn't need to send events. Just pass it along
         // and be sure that `SCREEN_INFORMATION` bypasses all event work if it's not there.
@@ -2310,7 +2310,7 @@ void SCREEN_INFORMATION::SetViewport(const Viewport& newViewport,
 //      sequence we didn't understand to.
 // Return Value:
 // - <none>
-void SCREEN_INFORMATION::SetTerminalConnection(_In_ ITerminalOutputConnection* const pTtyConnection)
+void SCREEN_INFORMATION::SetTerminalConnection(_In_ VtEngine* const pTtyConnection)
 {
     OutputStateMachineEngine& engine = reinterpret_cast<OutputStateMachineEngine&>(_stateMachine->Engine());
     if (pTtyConnection)

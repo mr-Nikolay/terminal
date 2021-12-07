@@ -68,7 +68,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 // - used - number of elements written
 // Return Value:
 // - S_OK, E_INVALIDARG or similar HRESULT error.
-[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputAttributeImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputAttributeImpl(SCREEN_INFORMATION& OutContext,
                                                                    const gsl::span<const WORD> attrs,
                                                                    const COORD target,
                                                                    size_t& used) noexcept
@@ -108,7 +108,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 // - used - number of elements written
 // Return Value:
 // - S_OK, E_INVALIDARG or similar HRESULT error.
-[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputCharacterWImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputCharacterWImpl(SCREEN_INFORMATION& OutContext,
                                                                     const std::wstring_view chars,
                                                                     const COORD target,
                                                                     size_t& used) noexcept
@@ -151,7 +151,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 // - used - number of elements written
 // Return Value:
 // - S_OK, E_INVALIDARG or similar HRESULT error.
-[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputCharacterAImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::WriteConsoleOutputCharacterAImpl(SCREEN_INFORMATION& OutContext,
                                                                     const std::string_view chars,
                                                                     const COORD target,
                                                                     size_t& used) noexcept
@@ -192,7 +192,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 // - cellsModified - the number of elements written
 // Return Value:
 // - S_OK or suitable HRESULT code from failure to write (memory issues, invalid arg, etc.)
-[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputAttributeImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputAttributeImpl(SCREEN_INFORMATION& OutContext,
                                                                   const WORD attribute,
                                                                   const size_t lengthToWrite,
                                                                   const COORD startingCoordinate,
@@ -250,7 +250,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 //   conpty mode. See GH#3126.
 // Return Value:
 // - S_OK or suitable HRESULT code from failure to write (memory issues, invalid arg, etc.)
-[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputCharacterWImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputCharacterWImpl(SCREEN_INFORMATION& OutContext,
                                                                    const wchar_t character,
                                                                    const size_t lengthToWrite,
                                                                    const COORD startingCoordinate,
@@ -331,7 +331,7 @@ void WriteToScreen(SCREEN_INFORMATION& screenInfo, const Viewport& region)
 // - cellsModified - the number of elements written
 // Return Value:
 // - S_OK or suitable HRESULT code from failure to write (memory issues, invalid arg, etc.)
-[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputCharacterAImpl(IConsoleOutputObject& OutContext,
+[[nodiscard]] HRESULT ApiRoutines::FillConsoleOutputCharacterAImpl(SCREEN_INFORMATION& OutContext,
                                                                    const char character,
                                                                    const size_t lengthToWrite,
                                                                    const COORD startingCoordinate,

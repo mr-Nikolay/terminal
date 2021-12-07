@@ -12,6 +12,8 @@ Author(s):
 - Mike Griese (migrie) Nov 2018
 */
 
+#pragma once
+
 namespace Microsoft::Console
 {
     class CursorBlinker final

@@ -38,11 +38,9 @@ Revision History:
 
 #include "../server/ObjectHeader.h"
 
-#include "../interactivity/inc/IAccessibilityNotifier.hpp"
+#include "../interactivity/win32/AccessibilityNotifier.hpp"
 #include "../interactivity/inc/IConsoleWindow.hpp"
 #include "../interactivity/inc/IWindowMetrics.hpp"
-
-#include "../inc/ITerminalOutputConnection.hpp"
 
 #include "../renderer/inc/FontInfo.hpp"
 #include "../renderer/inc/FontInfoDesired.hpp"
@@ -222,7 +220,7 @@ public:
     [[nodiscard]] HRESULT VtEraseAll();
     [[nodiscard]] HRESULT ClearBuffer();
 
-    void SetTerminalConnection(_In_ Microsoft::Console::ITerminalOutputConnection* const pTtyConnection);
+    void SetTerminalConnection(_In_ Microsoft::Console::Render::VtEngine* const pTtyConnection);
 
     void UpdateBottom();
     void MoveToBottom();
@@ -242,12 +240,12 @@ public:
 
 private:
     SCREEN_INFORMATION(_In_ Microsoft::Console::Interactivity::IWindowMetrics* pMetrics,
-                       _In_ Microsoft::Console::Interactivity::IAccessibilityNotifier* pNotifier,
+                       _In_ Microsoft::Console::Interactivity::Win32::AccessibilityNotifier* pNotifier,
                        const TextAttribute popupAttributes,
                        const FontInfo fontInfo);
 
     Microsoft::Console::Interactivity::IWindowMetrics* _pConsoleWindowMetrics;
-    Microsoft::Console::Interactivity::IAccessibilityNotifier* _pAccessibilityNotifier;
+    Microsoft::Console::Interactivity::Win32::AccessibilityNotifier* _pAccessibilityNotifier;
 
     [[nodiscard]] HRESULT _AdjustScreenBufferHelper(const RECT* const prcClientNew,
                                                     const COORD coordBufferOld,

@@ -4,6 +4,7 @@
 #include "precomp.h"
 
 #include "../inc/ServiceLocator.hpp"
+#include "../win32/WindowDpiApi.hpp"
 
 #include "InteractivityFactory.hpp"
 
@@ -14,12 +15,12 @@ using namespace Microsoft::Console::Interactivity;
 
 #pragma region Private Static Member Initialization
 
-std::unique_ptr<IInteractivityFactory> ServiceLocator::s_interactivityFactory;
+std::unique_ptr<InteractivityFactory> ServiceLocator::s_interactivityFactory;
 std::unique_ptr<IConsoleControl> ServiceLocator::s_consoleControl;
 std::unique_ptr<IConsoleInputThread> ServiceLocator::s_consoleInputThread;
 std::unique_ptr<IWindowMetrics> ServiceLocator::s_windowMetrics;
-std::unique_ptr<IAccessibilityNotifier> ServiceLocator::s_accessibilityNotifier;
-std::unique_ptr<IHighDpiApi> ServiceLocator::s_highDpiApi;
+std::unique_ptr<Win32::AccessibilityNotifier> ServiceLocator::s_accessibilityNotifier;
+std::unique_ptr<Win32::WindowDpiApi> ServiceLocator::s_highDpiApi;
 std::unique_ptr<ISystemConfigurationProvider> ServiceLocator::s_systemConfigurationProvider;
 std::unique_ptr<IInputServices> ServiceLocator::s_inputServices;
 
@@ -196,7 +197,7 @@ IConsoleInputThread* ServiceLocator::LocateConsoleInputThread()
     return s_consoleInputThread.get();
 }
 
-IHighDpiApi* ServiceLocator::LocateHighDpiApi()
+Win32::WindowDpiApi* ServiceLocator::LocateHighDpiApi()
 {
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -240,7 +241,7 @@ IWindowMetrics* ServiceLocator::LocateWindowMetrics()
     return s_windowMetrics.get();
 }
 
-IAccessibilityNotifier* ServiceLocator::LocateAccessibilityNotifier()
+Win32::AccessibilityNotifier* ServiceLocator::LocateAccessibilityNotifier()
 {
     return s_accessibilityNotifier.get();
 }

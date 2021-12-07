@@ -18,8 +18,8 @@ Revision History:
 #pragma once
 
 #include "ApiMessageState.h"
-#include "IApiRoutines.h"
 
+class ApiRoutines;
 class ConsoleProcessHandle;
 class ConsoleHandleData;
 
@@ -60,7 +60,7 @@ typedef struct _CONSOLE_API_MSG
     CONSOLE_API_STATE State{};
 
     IDeviceComm* _pDeviceComm{ nullptr };
-    IApiRoutines* _pApiRoutines{ nullptr };
+    ApiRoutines* _pApiRoutines{ nullptr };
 
     boost::container::small_vector<BYTE, 128> _inputBuffer;
     boost::container::small_vector<BYTE, 128> _outputBuffer;

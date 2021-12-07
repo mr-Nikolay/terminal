@@ -15,6 +15,8 @@ Author(s):
 --*/
 #pragma once
 
+#include "../terminal/adapter/conGetSet.hpp"
+
 namespace Microsoft::Console
 {
     class PtySignalInputThread final

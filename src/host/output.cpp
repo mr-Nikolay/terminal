@@ -273,7 +273,7 @@ static void _ScrollScreen(SCREEN_INFORMATION& screenInfo, const Viewport& source
 {
     if (screenInfo.IsActiveScreenBuffer())
     {
-        IAccessibilityNotifier* pNotifier = ServiceLocator::LocateAccessibilityNotifier();
+        const auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
         if (pNotifier != nullptr)
         {
             pNotifier->NotifyConsoleUpdateScrollEvent(target.Origin().X - source.Left(), target.Origin().Y - source.RightInclusive());
@@ -308,7 +308,7 @@ bool StreamScrollRegion(SCREEN_INFORMATION& screenInfo)
             COORD coordDelta = { 0 };
             coordDelta.Y = -1;
 
-            IAccessibilityNotifier* pNotifier = ServiceLocator::LocateAccessibilityNotifier();
+            const auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
             if (pNotifier)
             {
                 // Notify accessibility that a scroll has occurred.

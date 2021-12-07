@@ -3,10 +3,10 @@
 
 #include "precomp.h"
 
+#include "ApiDetector.hpp"
 #include "InteractivityFactory.hpp"
 
 #ifdef BUILD_ONECORE_INTERACTIVITY
-#include "..\onecore\AccessibilityNotifier.hpp"
 #include "..\onecore\ConsoleControl.hpp"
 #include "..\onecore\ConsoleInputThread.hpp"
 #include "..\onecore\ConsoleWindow.hpp"
@@ -114,7 +114,7 @@ using namespace Microsoft::Console::Interactivity;
     return status;
 }
 
-[[nodiscard]] NTSTATUS InteractivityFactory::CreateHighDpiApi(_Inout_ std::unique_ptr<IHighDpiApi>& api)
+[[nodiscard]] NTSTATUS InteractivityFactory::CreateHighDpiApi(_Inout_ std::unique_ptr<Win32::WindowDpiApi>& api)
 {
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -123,7 +123,7 @@ using namespace Microsoft::Console::Interactivity;
 
     if (NT_SUCCESS(status))
     {
-        std::unique_ptr<IHighDpiApi> newApi;
+        std::unique_ptr<Win32::WindowDpiApi> newApi;
         try
         {
             switch (level)
@@ -198,7 +198,7 @@ using namespace Microsoft::Console::Interactivity;
     return status;
 }
 
-[[nodiscard]] NTSTATUS InteractivityFactory::CreateAccessibilityNotifier(_Inout_ std::unique_ptr<IAccessibilityNotifier>& notifier)
+[[nodiscard]] NTSTATUS InteractivityFactory::CreateAccessibilityNotifier(_Inout_ std::unique_ptr<Win32::AccessibilityNotifier>& notifier)
 {
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -207,7 +207,7 @@ using namespace Microsoft::Console::Interactivity;
 
     if (NT_SUCCESS(status))
     {
-        std::unique_ptr<IAccessibilityNotifier> newNotifier;
+        std::unique_ptr<Win32::AccessibilityNotifier> newNotifier;
         try
         {
             switch (level)
@@ -218,7 +218,6 @@ using namespace Microsoft::Console::Interactivity;
 
 #ifdef BUILD_ONECORE_INTERACTIVITY
             case ApiLevel::OneCore:
-                newNotifier = std::make_unique<Microsoft::Console::Interactivity::OneCore::AccessibilityNotifier>();
                 break;
 #endif
             default:

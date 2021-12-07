@@ -15,13 +15,13 @@ Author(s):
 
 #pragma once
 
-#include "IInteractivityFactory.hpp"
-#include "../interactivity/inc/IConsoleWindow.hpp"
+#include "IConsoleControl.hpp"
+#include "IConsoleInputThread.hpp"
+#include "IInputServices.hpp"
+#include "ISystemConfigurationProvider.hpp"
 #include "../../host/globals.h"
-
-#include <memory>
-
-#pragma hdrstop
+#include "../base/InteractivityFactory.hpp"
+#include "../interactivity/inc/IConsoleWindow.hpp"
 
 using namespace Microsoft::Console::Types;
 
@@ -38,7 +38,7 @@ namespace Microsoft::Console::Interactivity
         //       is nullptr and a message is logged.
 
         [[nodiscard]] static HRESULT CreateAccessibilityNotifier();
-        static IAccessibilityNotifier* LocateAccessibilityNotifier();
+        static Win32::AccessibilityNotifier* LocateAccessibilityNotifier();
 
         [[nodiscard]] static NTSTATUS SetConsoleControlInstance(_In_ std::unique_ptr<IConsoleControl>&& control);
         static IConsoleControl* LocateConsoleControl();
@@ -71,7 +71,7 @@ namespace Microsoft::Console::Interactivity
             return static_cast<T*>(LocateWindowMetrics());
         }
 
-        static IHighDpiApi* LocateHighDpiApi();
+        static Win32::WindowDpiApi* LocateHighDpiApi();
         template<typename T>
         static T* LocateHighDpiApi()
         {
@@ -98,9 +98,9 @@ namespace Microsoft::Console::Interactivity
     private:
         [[nodiscard]] static NTSTATUS LoadInteractivityFactory();
 
-        static std::unique_ptr<IInteractivityFactory> s_interactivityFactory;
+        static std::unique_ptr<InteractivityFactory> s_interactivityFactory;
 
-        static std::unique_ptr<IAccessibilityNotifier> s_accessibilityNotifier;
+        static std::unique_ptr<Win32::AccessibilityNotifier> s_accessibilityNotifier;
         static std::unique_ptr<IConsoleControl> s_consoleControl;
         static std::unique_ptr<IConsoleInputThread> s_consoleInputThread;
         // TODO: MSFT 15344939 - some implementations of IConsoleWindow are currently singleton
@@ -108,7 +108,7 @@ namespace Microsoft::Console::Interactivity
         // pattern of the rest of the service interface pointers.
         static IConsoleWindow* s_consoleWindow;
         static std::unique_ptr<IWindowMetrics> s_windowMetrics;
-        static std::unique_ptr<IHighDpiApi> s_highDpiApi;
+        static std::unique_ptr<Win32::WindowDpiApi> s_highDpiApi;
         static std::unique_ptr<ISystemConfigurationProvider> s_systemConfigurationProvider;
         static std::unique_ptr<IInputServices> s_inputServices;
 

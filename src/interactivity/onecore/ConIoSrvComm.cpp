@@ -322,10 +322,9 @@ VOID ConIoSrvComm::ServiceInputPipe()
 VOID ConIoSrvComm::HandleFocusEvent(PCIS_EVENT Event)
 {
     BOOL Ret;
-    IRenderer* Renderer;
     CIS_EVENT ReplyEvent;
 
-    Renderer = ServiceLocator::LocateGlobals().pRender;
+    const auto renderer = ServiceLocator::LocateGlobals().pRender;
 
     switch (_displayMode)
     {
@@ -334,10 +333,10 @@ VOID ConIoSrvComm::HandleFocusEvent(PCIS_EVENT Event)
         {
             // Allow the renderer to paint (this has an effect only on
             // the first call).
-            Renderer->EnablePainting();
+            renderer->EnablePainting();
 
             // Force a complete redraw.
-            Renderer->TriggerRedrawAll();
+            renderer->TriggerRedrawAll();
         }
         break;
 
@@ -387,10 +386,10 @@ VOID ConIoSrvComm::HandleFocusEvent(PCIS_EVENT Event)
                 if (SUCCEEDED(hr))
                 {
                     // Allow the renderer to paint.
-                    Renderer->EnablePainting();
+                    renderer->EnablePainting();
 
                     // Force a complete redraw.
-                    Renderer->TriggerRedrawAll();
+                    renderer->TriggerRedrawAll();
                 }
             }
         }
@@ -400,7 +399,7 @@ VOID ConIoSrvComm::HandleFocusEvent(PCIS_EVENT Event)
             {
                 // Wait for the currently running paint operation, if any,
                 // and prevent further attempts to render.
-                Renderer->WaitForPaintCompletionAndDisable(1000);
+                renderer->WaitForPaintCompletionAndDisable(1000);
 
                 // Relinquish control of the graphics device (only one
                 // DirectX application may control the device at any one

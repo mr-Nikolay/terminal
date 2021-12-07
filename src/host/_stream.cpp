@@ -1065,7 +1065,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 // - S_OK if successful.
 // - S_OK if we need to wait (check if ppWaiter is not nullptr).
 // - Or a suitable HRESULT code for math/string/memory failures.
-[[nodiscard]] HRESULT WriteConsoleWImplHelper(IConsoleOutputObject& context,
+[[nodiscard]] HRESULT WriteConsoleWImplHelper(SCREEN_INFORMATION& context,
                                               const std::wstring_view buffer,
                                               size_t& read,
                                               bool requiresVtQuirk,
@@ -1111,7 +1111,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 // - S_OK if successful.
 // - S_OK if we need to wait (check if ppWaiter is not nullptr).
 // - Or a suitable HRESULT code for math/string/memory failures.
-[[nodiscard]] HRESULT ApiRoutines::WriteConsoleAImpl(IConsoleOutputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::WriteConsoleAImpl(SCREEN_INFORMATION& context,
                                                      const std::string_view buffer,
                                                      size_t& read,
                                                      bool requiresVtQuirk,
@@ -1301,7 +1301,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 // - S_OK if successful.
 // - S_OK if we need to wait (check if ppWaiter is not nullptr).
 // - Or a suitable HRESULT code for math/string/memory failures.
-[[nodiscard]] HRESULT ApiRoutines::WriteConsoleWImpl(IConsoleOutputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::WriteConsoleWImpl(SCREEN_INFORMATION& context,
                                                      const std::wstring_view buffer,
                                                      size_t& read,
                                                      bool requiresVtQuirk,

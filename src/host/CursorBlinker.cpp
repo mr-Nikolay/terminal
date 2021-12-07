@@ -98,16 +98,16 @@ void CursorBlinker::TimerRoutine(SCREEN_INFORMATION& ScreenInfo)
 
         // Send accessibility information
         {
-            IAccessibilityNotifier::ConsoleCaretEventFlags flags = IAccessibilityNotifier::ConsoleCaretEventFlags::CaretInvisible;
+            auto flags = ConsoleCaretEventFlags::CaretInvisible;
 
             // Flags is expected to be 2, 1, or 0. 2 in selecting (whether or not visible), 1 if just visible, 0 if invisible/noselect.
             if (WI_IsFlagSet(gci.Flags, CONSOLE_SELECTING))
             {
-                flags = IAccessibilityNotifier::ConsoleCaretEventFlags::CaretSelection;
+                flags = ConsoleCaretEventFlags::CaretSelection;
             }
             else if (cursor.IsVisible())
             {
-                flags = IAccessibilityNotifier::ConsoleCaretEventFlags::CaretVisible;
+                flags = ConsoleCaretEventFlags::CaretVisible;
             }
 
             pAccessibilityNotifier->NotifyConsoleCaretEvent(flags, MAKELONG(position.X, position.Y));

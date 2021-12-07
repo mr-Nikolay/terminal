@@ -9,8 +9,6 @@ using namespace Microsoft::Console::Interactivity::Win32;
 
 #pragma region Public Methods
 
-#pragma region IHighDpiApi Members
-
 [[nodiscard]] HRESULT WindowDpiApi::SetProcessPerMonitorDpiAwareness()
 {
     return SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -20,8 +18,6 @@ BOOL WindowDpiApi::SetProcessDpiAwarenessContext()
 {
     return SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 }
-
-#pragma endregion
 
 BOOL WindowDpiApi::SetProcessDpiAwarenessContext(_In_ DPI_AWARENESS_CONTEXT dpiContext)
 {

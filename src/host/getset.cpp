@@ -289,7 +289,7 @@ void ApiRoutines::GetNumberOfConsoleMouseButtonsImpl(ULONG& buttons) noexcept
 // - consoleFontInfoEx - structure containing font information like size, family, weight, etc.
 // Return Value:
 // - S_OK, string copy failure code or code from thrown exception
-[[nodiscard]] HRESULT ApiRoutines::SetCurrentConsoleFontExImpl(IConsoleOutputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::SetCurrentConsoleFontExImpl(SCREEN_INFORMATION& context,
                                                                const bool /*isForMaximumWindowSize*/,
                                                                const CONSOLE_FONT_INFOEX& consoleFontInfoEx) noexcept
 {

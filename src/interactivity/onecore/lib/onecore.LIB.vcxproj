@@ -16,7 +16,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\host\newdelete.cpp" />
-    <ClCompile Include="..\AccessibilityNotifier.cpp" />
     <ClCompile Include="..\ConsoleControl.cpp" />
     <ClCompile Include="..\ConsoleInputThread.cpp" />
     <ClCompile Include="..\ConsoleWindow.cpp" />
@@ -29,7 +28,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\host\newdelete.hpp" />
-    <ClInclude Include="..\AccessibilityNotifier.hpp" />
     <ClInclude Include="..\ConsoleControl.hpp" />
     <ClInclude Include="..\ConsoleInputThread.hpp" />
     <ClInclude Include="..\ConsoleWindow.hpp" />

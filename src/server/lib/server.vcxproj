@@ -42,7 +42,6 @@
     <ClInclude Include="..\DeviceComm.h" />
     <ClInclude Include="..\DeviceHandle.h" />
     <ClInclude Include="..\Entrypoints.h" />
-    <ClInclude Include="..\IApiRoutines.h" />
     <ClInclude Include="..\IoDispatchers.h" />
     <ClInclude Include="..\IoSorter.h" />
     <ClInclude Include="..\IWaitRoutine.h" />

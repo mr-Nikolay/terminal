@@ -2,15 +2,13 @@
 // Licensed under the MIT license.
 
 #include "precomp.h"
-
 #include "ApiDispatchers.h"
 
-#include "../host/directio.h"
-#include "../host/getset.h"
-#include "../host/stream.h"
-#include "../host/srvinit.h"
-#include "../host/telemetry.hpp"
 #include "../host/cmdline.h"
+#include "../host/directio.h"
+#include "../host/srvinit.h"
+#include "../host/stream.h"
+#include "../host/telemetry.hpp"
 
 [[nodiscard]] HRESULT ApiDispatchers::ServerGetConsoleCP(_Inout_ CONSOLE_API_MSG* const m,
                                                          _Inout_ BOOL* const /*pbReplyPending*/)

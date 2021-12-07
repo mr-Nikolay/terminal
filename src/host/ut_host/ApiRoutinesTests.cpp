@@ -26,7 +26,6 @@ class ApiRoutinesTests
     std::unique_ptr<CommonState> m_state;
 
     ApiRoutines _Routines;
-    IApiRoutines* _pApiRoutines = &_Routines;
     CommandHistory* m_pHistory;
 
     TEST_METHOD_SETUP(MethodSetup)
@@ -96,7 +95,7 @@ class ApiRoutinesTests
         bool const fCursorDBModeExpected = ((!!_fPrevInsertMode) == fInsertModeExpected);
 
         // Call the API
-        HRESULT const hrActual = _pApiRoutines->SetConsoleInputModeImpl(*pii, ulNewMode);
+        HRESULT const hrActual = _Routines.SetConsoleInputModeImpl(*pii, ulNewMode);
 
         // Now do verifications of final state.
         VERIFY_ARE_EQUAL(hrExpected, hrActual);
@@ -195,7 +194,7 @@ class ApiRoutinesTests
         Log::Comment(L"Verify that we cannot unset various extended flags without the ENABLE_EXTENDED_FLAGS flag.");
         PrepVerifySetConsoleInputModeImpl(ENABLE_INSERT_MODE | ENABLE_QUICK_EDIT_MODE | ENABLE_AUTO_POSITION);
         InputBuffer* const pii = gci.pInputBuffer;
-        HRESULT const hr = _pApiRoutines->SetConsoleInputModeImpl(*pii, 0);
+        HRESULT const hr = _Routines.SetConsoleInputModeImpl(*pii, 0);
 
         VERIFY_ARE_EQUAL(S_OK, hr);
         VERIFY_ARE_EQUAL(true, !!gci.GetInsertMode());
@@ -243,7 +242,7 @@ class ApiRoutinesTests
         char pszTitle[MAX_PATH]; // most applications use MAX_PATH
         size_t cchWritten = 0;
         size_t cchNeeded = 0;
-        VERIFY_SUCCEEDED(_pApiRoutines->GetConsoleTitleAImpl(gsl::span<char>(pszTitle, ARRAYSIZE(pszTitle)), cchWritten, cchNeeded));
+        VERIFY_SUCCEEDED(_Routines.GetConsoleTitleAImpl(gsl::span<char>(pszTitle, ARRAYSIZE(pszTitle)), cchWritten, cchNeeded));
 
         VERIFY_ARE_NOT_EQUAL(0u, cchWritten);
         // NOTE: W version of API returns string length. A version of API returns buffer length (string + null).
@@ -260,7 +259,7 @@ class ApiRoutinesTests
         wchar_t pwszTitle[MAX_PATH]; // most applications use MAX_PATH
         size_t cchWritten = 0;
         size_t cchNeeded = 0;
-        VERIFY_SUCCEEDED(_pApiRoutines->GetConsoleTitleWImpl(gsl::span<wchar_t>(pwszTitle, ARRAYSIZE(pwszTitle)), cchWritten, cchNeeded));
+        VERIFY_SUCCEEDED(_Routines.GetConsoleTitleWImpl(gsl::span<wchar_t>(pwszTitle, ARRAYSIZE(pwszTitle)), cchWritten, cchNeeded));
 
         VERIFY_ARE_NOT_EQUAL(0u, cchWritten);
 
@@ -306,7 +305,7 @@ class ApiRoutinesTests
         char pszTitle[MAX_PATH]; // most applications use MAX_PATH
         size_t cchWritten = 0;
         size_t cchNeeded = 0;
-        VERIFY_SUCCEEDED(_pApiRoutines->GetConsoleOriginalTitleAImpl(gsl::span<char>(pszTitle, ARRAYSIZE(pszTitle)), cchWritten, cchNeeded));
+        VERIFY_SUCCEEDED(_Routines.GetConsoleOriginalTitleAImpl(gsl::span<char>(pszTitle, ARRAYSIZE(pszTitle)), cchWritten, cchNeeded));
 
         VERIFY_ARE_NOT_EQUAL(0u, cchWritten);
         // NOTE: W version of API returns string length. A version of API returns buffer length (string + null).
@@ -323,7 +322,7 @@ class ApiRoutinesTests
         wchar_t pwszTitle[MAX_PATH]; // most applications use MAX_PATH
         size_t cchWritten = 0;
         size_t cchNeeded = 0;
-        VERIFY_SUCCEEDED(_pApiRoutines->GetConsoleOriginalTitleWImpl(gsl::span<wchar_t>(pwszTitle, ARRAYSIZE(pwszTitle)), cchWritten, cchNeeded));
+        VERIFY_SUCCEEDED(_Routines.GetConsoleOriginalTitleWImpl(gsl::span<wchar_t>(pwszTitle, ARRAYSIZE(pwszTitle)), cchWritten, cchNeeded));
 
         VERIFY_ARE_NOT_EQUAL(0u, cchWritten);
 
@@ -408,7 +407,7 @@ class ApiRoutinesTests
             const size_t cchWriteLength = std::min(cchIncrement, cchTestText - i);
 
             // Run the test method
-            const HRESULT hr = _pApiRoutines->WriteConsoleAImpl(si, { pszTestText + i, cchWriteLength }, cchRead, false, waiter);
+            const HRESULT hr = _Routines.WriteConsoleAImpl(si, { pszTestText + i, cchWriteLength }, cchRead, false, waiter);
 
             VERIFY_ARE_EQUAL(S_OK, hr, L"Successful result code from writing.");
             if (!fInduceWait)
@@ -464,7 +463,7 @@ class ApiRoutinesTests
 
         size_t cchRead = 0;
         std::unique_ptr<IWaitRoutine> waiter;
-        const HRESULT hr = _pApiRoutines->WriteConsoleWImpl(si, testText, cchRead, false, waiter);
+        const HRESULT hr = _Routines.WriteConsoleWImpl(si, testText, cchRead, false, waiter);
 
         VERIFY_ARE_EQUAL(S_OK, hr, L"Successful result code from writing.");
         if (!fInduceWait)
@@ -674,7 +673,7 @@ class ApiRoutinesTests
         }
 
         // Scroll everything up and backfill with red As.
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Fill screen with green Zs. Scroll all down by two, backfilling with red As. Confirm every cell.");
@@ -684,7 +683,7 @@ class ApiRoutinesTests
 
         // Scroll everything down and backfill with red As.
         destination = { 0, 2 };
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         if (checkClipped)
@@ -704,7 +703,7 @@ class ApiRoutinesTests
 
         // Scroll everything left and backfill with red As.
         destination = { -2, 0 };
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Fill screen with green Zs. Scroll all right by two, backfilling with red As. Confirm every cell.");
@@ -714,7 +713,7 @@ class ApiRoutinesTests
 
         // Scroll everything right and backfill with red As.
         destination = { 2, 0 };
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Fill screen with green Zs. Move everything down and right by two, backfilling with red As. Confirm every cell.");
@@ -730,7 +729,7 @@ class ApiRoutinesTests
             clipViewport = Viewport::FromDimensions({ 1, 1 }, { 4, 4 });
             clipRectangle = clipViewport.value().ToInclusive();
         }
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Fill screen with green Zs. Move everything up and left by two, backfilling with red As. Confirm every cell.");
@@ -746,7 +745,7 @@ class ApiRoutinesTests
             clipViewport = Viewport::FromDimensions({ 0, 0 }, { 4, 4 });
             clipRectangle = clipViewport.value().ToInclusive();
         }
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Scroll everything completely off the screen.");
@@ -765,7 +764,7 @@ class ApiRoutinesTests
             clipViewport = Viewport::FromDimensions({ 0, 0 }, clipRectDimensions);
             clipRectangle = clipViewport.value().ToInclusive();
         }
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
         ValidateScreen(si, background, fill, destination, clipViewport);
 
         Log::Comment(L"Scroll everything completely off the screen but use a null fill and confirm it is replaced with default attribute spaces.");
@@ -777,7 +776,7 @@ class ApiRoutinesTests
 
         CHAR_INFO nullFill = { 0 };
 
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, nullFill.Char.UnicodeChar, nullFill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, nullFill.Char.UnicodeChar, nullFill.Attributes));
 
         CHAR_INFO fillExpected;
         fillExpected.Char.UnicodeChar = UNICODE_SPACE;
@@ -825,7 +824,7 @@ class ApiRoutinesTests
         destination = { scroll.Left + 1, scroll.Top + 1 };
 
         // Move rectangle and backfill with red As.
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
 
         // Screen should now look like either:
         // (with no clip rectangle):
@@ -869,7 +868,7 @@ class ApiRoutinesTests
         destination = { scroll.Left + 2, scroll.Top + 2 };
 
         // Move rectangle and backfill with red As.
-        VERIFY_SUCCEEDED(_pApiRoutines->ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
+        VERIFY_SUCCEEDED(_Routines.ScrollConsoleScreenBufferWImpl(si, scroll, destination, clipRectangle, fill.Char.UnicodeChar, fill.Attributes));
 
         // Screen should now look like either:
         // (with no clip rectangle):

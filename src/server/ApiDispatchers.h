@@ -17,8 +17,6 @@ Revision History:
 
 #pragma once
 
-#include "IApiRoutines.h"
-
 #include "ApiMessage.h"
 
 namespace ApiDispatchers

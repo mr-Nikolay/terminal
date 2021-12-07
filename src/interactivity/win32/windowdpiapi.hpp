@@ -13,8 +13,6 @@ Author(s):
 --*/
 #pragma once
 
-#include "../inc/IHighDpiApi.hpp"
-
 // Uncomment to build ConFans or other down-level build scenarios.
 // #define CON_DPIAPI_INDIRECT
 
@@ -45,7 +43,7 @@ typedef enum DPI_AWARENESS
 
 namespace Microsoft::Console::Interactivity::Win32
 {
-    class WindowDpiApi final : public IHighDpiApi
+    class WindowDpiApi
     {
     public:
         // IHighDpi Interface

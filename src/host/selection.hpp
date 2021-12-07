@@ -20,7 +20,7 @@ Revision History:
 
 #include "input.h"
 
-#include "../interactivity/inc/IAccessibilityNotifier.hpp"
+#include "../interactivity/win32/AccessibilityNotifier.hpp"
 #include "../interactivity/inc/IConsoleWindow.hpp"
 
 class Selection

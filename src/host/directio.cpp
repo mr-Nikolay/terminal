@@ -265,7 +265,7 @@ void EventsToUnicode(_Inout_ std::deque<std::unique_ptr<IInputEvent>>& inEvents,
 // - waiter - If we have to wait (not enough data to fill client
 // buffer), this contains context that will allow the server to
 // restore this call later.
-[[nodiscard]] HRESULT ApiRoutines::PeekConsoleInputAImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::PeekConsoleInputAImpl(InputBuffer& context,
                                                          std::deque<std::unique_ptr<IInputEvent>>& outEvents,
                                                          const size_t eventsToRead,
                                                          INPUT_READ_HANDLE_DATA& readHandleState,
@@ -305,7 +305,7 @@ void EventsToUnicode(_Inout_ std::deque<std::unique_ptr<IInputEvent>>& inEvents,
 // - waiter - If we have to wait (not enough data to fill client
 // buffer), this contains context that will allow the server to
 // restore this call later.
-[[nodiscard]] HRESULT ApiRoutines::PeekConsoleInputWImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::PeekConsoleInputWImpl(InputBuffer& context,
                                                          std::deque<std::unique_ptr<IInputEvent>>& outEvents,
                                                          const size_t eventsToRead,
                                                          INPUT_READ_HANDLE_DATA& readHandleState,
@@ -345,7 +345,7 @@ void EventsToUnicode(_Inout_ std::deque<std::unique_ptr<IInputEvent>>& inEvents,
 // - waiter - If we have to wait (not enough data to fill client
 // buffer), this contains context that will allow the server to
 // restore this call later.
-[[nodiscard]] HRESULT ApiRoutines::ReadConsoleInputAImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::ReadConsoleInputAImpl(InputBuffer& context,
                                                          std::deque<std::unique_ptr<IInputEvent>>& outEvents,
                                                          const size_t eventsToRead,
                                                          INPUT_READ_HANDLE_DATA& readHandleState,
@@ -385,7 +385,7 @@ void EventsToUnicode(_Inout_ std::deque<std::unique_ptr<IInputEvent>>& inEvents,
 // - waiter - If we have to wait (not enough data to fill client
 // buffer), this contains context that will allow the server to
 // restore this call later.
-[[nodiscard]] HRESULT ApiRoutines::ReadConsoleInputWImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::ReadConsoleInputWImpl(InputBuffer& context,
                                                          std::deque<std::unique_ptr<IInputEvent>>& outEvents,
                                                          const size_t eventsToRead,
                                                          INPUT_READ_HANDLE_DATA& readHandleState,

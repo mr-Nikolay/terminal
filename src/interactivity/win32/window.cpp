@@ -461,7 +461,7 @@ void Window::ChangeViewport(const SMALL_RECT NewWindow)
         pSelection->HideSelection();
 
         // Fire off an event to let accessibility apps know we've scrolled.
-        IAccessibilityNotifier* pNotifier = ServiceLocator::LocateAccessibilityNotifier();
+        const auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
         if (pNotifier != nullptr)
         {
             pNotifier->NotifyConsoleUpdateScrollEvent(ScreenInfo.GetViewport().Left() - NewWindow.Left,

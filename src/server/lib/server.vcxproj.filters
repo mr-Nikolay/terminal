@@ -131,9 +131,6 @@
     <ClInclude Include="..\ApiDispatchers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\IApiRoutines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\IWaitRoutine.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -2,33 +2,24 @@
 // Licensed under the MIT license.
 
 #include "precomp.h"
-
 #include "srvinit.h"
 
+#include "ApiRoutines.h"
 #include "dbcs.h"
 #include "handle.h"
 #include "registry.hpp"
+#include "renderData.hpp"
 #include "renderFontDefaults.hpp"
-
-#include "ApiRoutines.h"
-
-#include "../types/inc/GlyphWidth.hpp"
-
-#include "../server/DeviceHandle.h"
-#include "../server/Entrypoints.h"
-#include "../server/IoSorter.h"
-
-#include "../interactivity/inc/ServiceLocator.hpp"
+#include "../inc/conint.h"
 #include "../interactivity/base/ApiDetector.hpp"
 #include "../interactivity/base/RemoteConsoleControl.hpp"
-
-#include "renderData.hpp"
-#include "../renderer/base/renderer.hpp"
-
-#include "../inc/conint.h"
+#include "../interactivity/inc/ServiceLocator.hpp"
+#include "../interactivity/win32/WindowDpiApi.hpp"
 #include "../propslib/DelegationConfig.hpp"
-
-#include "tracing.hpp"
+#include "../renderer/base/renderer.hpp"
+#include "../server/DeviceHandle.h"
+#include "../server/IoSorter.h"
+#include "../types/inc/GlyphWidth.hpp"
 
 #if TIL_FEATURE_RECEIVEINCOMINGHANDOFF_ENABLED
 #include "ITerminalHandoff.h"
@@ -216,7 +207,7 @@ static bool s_IsOnDesktop()
     // Set the process's default dpi awareness context to PMv2 so that new top level windows
     // inherit their WM_DPICHANGED* broadcast mode (and more, like dialog scaling) from the thread.
 
-    IHighDpiApi* pHighDpiApi = ServiceLocator::LocateHighDpiApi();
+    const auto pHighDpiApi = ServiceLocator::LocateHighDpiApi();
     if (pHighDpiApi)
     {
         // N.B.: There is no high DPI support on OneCore (non-UAP) systems.

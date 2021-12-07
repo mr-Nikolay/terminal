@@ -741,7 +741,7 @@ size_t RetrieveNumberOfSpaces(_In_ SHORT sOriginalCursorPositionX,
     CATCH_RETURN();
 }
 
-[[nodiscard]] HRESULT ApiRoutines::ReadConsoleAImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::ReadConsoleAImpl(InputBuffer& context,
                                                     gsl::span<char> buffer,
                                                     size_t& written,
                                                     std::unique_ptr<IWaitRoutine>& waiter,
@@ -769,7 +769,7 @@ size_t RetrieveNumberOfSpaces(_In_ SHORT sOriginalCursorPositionX,
     CATCH_RETURN();
 }
 
-[[nodiscard]] HRESULT ApiRoutines::ReadConsoleWImpl(IConsoleInputObject& context,
+[[nodiscard]] HRESULT ApiRoutines::ReadConsoleWImpl(InputBuffer& context,
                                                     gsl::span<char> buffer,
                                                     size_t& written,
                                                     std::unique_ptr<IWaitRoutine>& waiter,

@@ -162,7 +162,7 @@ void Selection::InitializeMouseSelection(const COORD coordBufferPos)
     auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
     if (pNotifier)
     {
-        pNotifier->NotifyConsoleCaretEvent(IAccessibilityNotifier::ConsoleCaretEventFlags::CaretSelection, PACKCOORD(coordBufferPos));
+        pNotifier->NotifyConsoleCaretEvent(ConsoleCaretEventFlags::CaretSelection, PACKCOORD(coordBufferPos));
     }
 }
 
@@ -272,7 +272,7 @@ void Selection::ExtendSelection(_In_ COORD coordBufferPos)
     auto pNotifier = ServiceLocator::LocateAccessibilityNotifier();
     if (pNotifier)
     {
-        pNotifier->NotifyConsoleCaretEvent(IAccessibilityNotifier::ConsoleCaretEventFlags::CaretSelection, PACKCOORD(coordBufferPos));
+        pNotifier->NotifyConsoleCaretEvent(ConsoleCaretEventFlags::CaretSelection, PACKCOORD(coordBufferPos));
     }
     LOG_IF_FAILED(ServiceLocator::LocateConsoleWindow()->SignalUia(UIA_Text_TextSelectionChangedEventId));
 }

@@ -3,10 +3,10 @@ Copyright (c) Microsoft Corporation
 Licensed under the MIT license.
 
 Module Name:
-- IAccessibilityNotifier.hpp
+- AccessibilityNotifier.hpp
 
 Abstract:
-- Win32 implementation of the IAccessibilityNotifier interface.
+- Win32 implementation of the AccessibilityNotifier interface.
 
 Author(s):
 - Hernan Gatta (HeGatta) 29-Mar-2017
@@ -14,19 +14,21 @@ Author(s):
 
 #pragma once
 
-#include "precomp.h"
-
-#include "../inc/IAccessibilityNotifier.hpp"
-
-#pragma hdrstop
+namespace Microsoft::Console::Interactivity
+{
+    enum class ConsoleCaretEventFlags
+    {
+        CaretInvisible,
+        CaretSelection,
+        CaretVisible
+    };
+}
 
 namespace Microsoft::Console::Interactivity::Win32
 {
-    class AccessibilityNotifier final : public IAccessibilityNotifier
+    class AccessibilityNotifier
     {
     public:
-        ~AccessibilityNotifier() = default;
-
         void NotifyConsoleCaretEvent(_In_ RECT rectangle);
         void NotifyConsoleCaretEvent(_In_ ConsoleCaretEventFlags flags, _In_ LONG position);
         void NotifyConsoleUpdateScrollEvent(_In_ LONG x, _In_ LONG y);
