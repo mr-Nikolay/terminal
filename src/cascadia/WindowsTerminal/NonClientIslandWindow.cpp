@@ -87,7 +87,7 @@ void NonClientIslandWindow::MakeWindow() noexcept
     THROW_HR_IF_NULL(E_UNEXPECTED, _dragBarWindow);
 }
 
-LRESULT NonClientIslandWindow::_dragBarNcHitTest(const til::point& pointer)
+LRESULT NonClientIslandWindow::_dragBarNcHitTest(const til::point pointer)
 {
     RECT rcParent = GetWindowRect();
     // The size of the buttons doesn't change over the life of the application.
@@ -539,14 +539,14 @@ void NonClientIslandWindow::_UpdateIslandPosition(const UINT windowWidth, const 
     // buttons, which will make them clickable. It's perhaps not the right fix,
     // but it works.
     // _GetTopBorderHeight() returns 0 when we're maximized.
-    const short topBorderHeight = ::base::saturated_cast<short>((originalTopHeight == 0) ? -1 : originalTopHeight);
+    const auto topBorderHeight = originalTopHeight == 0 ? -1 : originalTopHeight;
 
-    const COORD newIslandPos = { 0, topBorderHeight };
+    const til::point newIslandPos{ 0, topBorderHeight };
 
     winrt::check_bool(SetWindowPos(_interopWindowHandle,
                                    HWND_BOTTOM,
-                                   newIslandPos.X,
-                                   newIslandPos.Y,
+                                   newIslandPos.x,
+                                   newIslandPos.y,
                                    windowWidth,
                                    windowHeight - topBorderHeight,
                                    SWP_SHOWWINDOW | SWP_NOACTIVATE));
@@ -829,7 +829,7 @@ RECT NonClientIslandWindow::GetNonClientFrame(UINT dpi) const noexcept
 // - dpi: dpi of a monitor on which the window is placed
 // Return Value
 // - The size difference
-SIZE NonClientIslandWindow::GetTotalNonClientExclusiveSize(UINT dpi) const noexcept
+til::size NonClientIslandWindow::GetTotalNonClientExclusiveSize(UINT dpi) const noexcept
 {
     const auto islandFrame{ GetNonClientFrame(dpi) };
 

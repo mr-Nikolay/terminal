@@ -75,7 +75,6 @@ public:
         _expectedCursor{ -1, -1 },
         _expectedWindowManipulation{ DispatchTypes::WindowManipulationType::Invalid }
     {
-        std::fill_n(_expectedParams, ARRAYSIZE(_expectedParams), gsl::narrow<short>(0));
     }
 
     void RoundtripTerminalInputCallback(_In_ std::deque<std::unique_ptr<IInputEvent>>& inEvents)
@@ -203,9 +202,9 @@ public:
     bool _expectedToCallWindowManipulation;
     bool _expectSendCtrlC;
     bool _expectCursorPosition;
-    COORD _expectedCursor;
+    til::point _expectedCursor;
     DispatchTypes::WindowManipulationType _expectedWindowManipulation;
-    unsigned short _expectedParams[16];
+    std::array<uint16_t, 16> _expectedParams{};
 };
 
 class Microsoft::Console::VirtualTerminal::InputEngineTest
@@ -219,21 +218,21 @@ class Microsoft::Console::VirtualTerminal::InputEngineTest
     void TestInputStringCallback(std::deque<std::unique_ptr<IInputEvent>>& inEvents);
     std::wstring GenerateSgrMouseSequence(const CsiMouseButtonCodes button,
                                           const unsigned short modifiers,
-                                          const COORD position,
+                                          const til::point position,
                                           const VTID direction);
 
     // SGR_PARAMS serves as test input
     // - the state of the buttons (constructed via InputStateMachineEngine::CsiActionMouseCodes)
     // - the {x,y} position of the event on the viewport where the top-left is {1,1}
     // - the direction of the mouse press (constructed via InputStateMachineEngine::CsiActionCodes)
-    typedef std::tuple<CsiMouseButtonCodes, unsigned short, COORD, CsiActionCodes> SGR_PARAMS;
+    typedef std::tuple<CsiMouseButtonCodes, unsigned short, til::point, CsiActionCodes> SGR_PARAMS;
 
     // MOUSE_EVENT_PARAMS serves as expected output
     // - buttonState
     // - controlKeyState
     // - mousePosition
     // - eventFlags
-    typedef std::tuple<DWORD, DWORD, COORD, DWORD> MOUSE_EVENT_PARAMS;
+    typedef std::tuple<DWORD, DWORD, til::point, DWORD> MOUSE_EVENT_PARAMS;
 
     void VerifySGRMouseData(const std::vector<std::tuple<SGR_PARAMS, MOUSE_EVENT_PARAMS>> testData);
 
@@ -390,10 +389,10 @@ bool TestInteractDispatch::WriteString(const std::wstring_view string)
     return WriteInput(keyEvents);
 }
 
-bool TestInteractDispatch::MoveCursor(const size_t row, const size_t col)
+bool TestInteractDispatch::MoveCursor(const til::CoordType row, const til::CoordType col)
 {
     VERIFY_IS_TRUE(_testState->_expectCursorPosition);
-    COORD received = { static_cast<short>(col), static_cast<short>(row) };
+    til::point received{ col, row };
     VERIFY_ARE_EQUAL(_testState->_expectedCursor, received);
     return true;
 }
@@ -442,9 +441,9 @@ void InputEngineTest::C0Test()
             break;
         }
 
-        short keyscan = VkKeyScanW(expectedWch);
-        short vkey = keyscan & 0xff;
-        short keyscanModifiers = (keyscan >> 8) & 0xff;
+        auto keyscan = VkKeyScanW(expectedWch);
+        WORD vkey = keyscan & 0xff;
+        auto keyscanModifiers = (keyscan >> 8) & 0xff;
         WORD scanCode = (WORD)MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
 
         DWORD dwModifierState = 0;
@@ -520,11 +519,11 @@ void InputEngineTest::AlphanumericTest()
     {
         std::wstring inputSeq = std::wstring(&wch, 1);
 
-        short keyscan = VkKeyScanW(wch);
-        short vkey = keyscan & 0xff;
+        auto keyscan = VkKeyScanW(wch);
+        WORD vkey = keyscan & 0xff;
         WORD scanCode = (wchar_t)MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
 
-        short keyscanModifiers = (keyscan >> 8) & 0xff;
+        auto keyscanModifiers = (keyscan >> 8) & 0xff;
         // Because of course, these are not the same flags.
         DWORD dwModifierState = 0 |
                                 (WI_IsFlagSet(keyscanModifiers, 1) ? SHIFT_PRESSED : 0) |
@@ -632,8 +631,8 @@ void InputEngineTest::WindowManipulationTest()
         L"Only the valid ones should call the "
         L"TestInteractDispatch::WindowManipulation callback."));
 
-    const unsigned short param1 = 123;
-    const unsigned short param2 = 456;
+    const auto param1 = 123;
+    const auto param2 = 456;
     const wchar_t* const wszParam1 = L"123";
     const wchar_t* const wszParam2 = L"456";
 
@@ -1073,7 +1072,7 @@ void InputEngineTest::AltBackspaceEnterTest()
 // - the SGR VT sequence
 std::wstring InputEngineTest::GenerateSgrMouseSequence(const CsiMouseButtonCodes button,
                                                        const unsigned short modifiers,
-                                                       const COORD position,
+                                                       const til::point position,
                                                        const VTID direction)
 {
     // we first need to convert "button" and "modifiers" into an 8 bit sequence
@@ -1091,7 +1090,7 @@ std::wstring InputEngineTest::GenerateSgrMouseSequence(const CsiMouseButtonCodes
     const wchar_t prefixChar = direction[0];
     const wchar_t finalChar = direction[1];
 
-    return wil::str_printf_failfast<std::wstring>(L"\x1b[%c%d;%d;%d%c", prefixChar, static_cast<int>(actionCode), position.X, position.Y, finalChar);
+    return wil::str_printf_failfast<std::wstring>(L"\x1b[%c%d;%d;%d%c", prefixChar, static_cast<int>(actionCode), position.x, position.y, finalChar);
 }
 
 void InputEngineTest::VerifySGRMouseData(const std::vector<std::tuple<SGR_PARAMS, MOUSE_EVENT_PARAMS>> testData)
@@ -1118,7 +1117,7 @@ void InputEngineTest::VerifySGRMouseData(const std::vector<std::tuple<SGR_PARAMS
         inputRec.EventType = MOUSE_EVENT;
         inputRec.Event.MouseEvent.dwButtonState = std::get<0>(expected);
         inputRec.Event.MouseEvent.dwControlKeyState = std::get<1>(expected);
-        inputRec.Event.MouseEvent.dwMousePosition = std::get<2>(expected);
+        inputRec.Event.MouseEvent.dwMousePosition = til::unwrap_coord(std::get<2>(expected));
         inputRec.Event.MouseEvent.dwEventFlags = std::get<3>(expected);
 
         testState.vExpectedInput.push_back(inputRec);
@@ -1346,8 +1345,8 @@ void InputEngineTest::CtrlAltZCtrlAltXTest()
         auto inputSeq = L"\x1b\x1a"; // ^[^Z
 
         wchar_t expectedWch = L'Z';
-        short keyscan = VkKeyScanW(expectedWch);
-        short vkey = keyscan & 0xff;
+        auto keyscan = VkKeyScanW(expectedWch);
+        WORD vkey = keyscan & 0xff;
         WORD scanCode = (WORD)MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
 
         INPUT_RECORD inputRec;
@@ -1368,8 +1367,8 @@ void InputEngineTest::CtrlAltZCtrlAltXTest()
         auto inputSeq = L"\x1b\x18"; // ^[^X
 
         wchar_t expectedWch = L'X';
-        short keyscan = VkKeyScanW(expectedWch);
-        short vkey = keyscan & 0xff;
+        auto keyscan = VkKeyScanW(expectedWch);
+        WORD vkey = keyscan & 0xff;
         WORD scanCode = (WORD)MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
 
         INPUT_RECORD inputRec;
@@ -1580,15 +1579,15 @@ void InputEngineTest::TestWin32InputOptionals()
 
     {
         std::vector<VTParameter> params{
-            ::base::saturated_cast<size_t>(provideVirtualKeyCode ? 1 : 0),
-            ::base::saturated_cast<size_t>(provideVirtualScanCode ? 2 : 0),
-            ::base::saturated_cast<size_t>(provideCharData ? 3 : 0),
-            ::base::saturated_cast<size_t>(provideKeyDown ? 4 : 0),
-            ::base::saturated_cast<size_t>(provideActiveModifierKeys ? 5 : 0),
-            ::base::saturated_cast<size_t>(provideRepeatCount ? 6 : 0)
+            provideVirtualKeyCode ? 1 : 0,
+            provideVirtualScanCode ? 2 : 0,
+            provideCharData ? 3 : 0,
+            provideKeyDown ? 4 : 0,
+            provideActiveModifierKeys ? 5 : 0,
+            provideRepeatCount ? 6 : )
         };
 
-        KeyEvent key = engine->_GenerateWin32Key({ params.data(), static_cast<size_t>(numParams) });
+        KeyEvent key = engine->_GenerateWin32Key({ params.data(), numParams });
         VERIFY_ARE_EQUAL((provideVirtualKeyCode && numParams > 0) ? 1 : 0,
                          key.GetVirtualKeyCode());
         VERIFY_ARE_EQUAL((provideVirtualScanCode && numParams > 1) ? 2 : 0,

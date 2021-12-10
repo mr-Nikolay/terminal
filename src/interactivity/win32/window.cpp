@@ -172,8 +172,8 @@ void Window::_UpdateSystemMetrics() const
 
     Scrolling::s_UpdateSystemMetrics();
 
-    g.sVerticalScrollSize = (SHORT)dpiApi->GetSystemMetricsForDpi(SM_CXVSCROLL, g.dpi);
-    g.sHorizontalScrollSize = (SHORT)dpiApi->GetSystemMetricsForDpi(SM_CYHSCROLL, g.dpi);
+    g.sVerticalScrollSize = gsl::narrow<short>(dpiApi->GetSystemMetricsForDpi(SM_CXVSCROLL, g.dpi));
+    g.sHorizontalScrollSize = gsl::narrow<short>(dpiApi->GetSystemMetricsForDpi(SM_CYHSCROLL, g.dpi));
 
     gci.GetCursorBlinker().UpdateSystemMetrics();
 
@@ -261,7 +261,7 @@ void Window::_UpdateSystemMetrics() const
 
         // Figure out coordinates and how big to make the window from the desired client viewport size
         // Put left, top, right and bottom into rectProposed for checking against monitor screens below
-        RECT rectProposed = { pSettings->GetWindowOrigin().X, pSettings->GetWindowOrigin().Y, 0, 0 };
+        RECT rectProposed = { pSettings->GetWindowOrigin().x, pSettings->GetWindowOrigin().y, 0, 0 };
         _CalculateWindowRect(pSettings->GetWindowSize(), &rectProposed); //returns with rectangle filled out
 
         if (!WI_IsFlagSet(gci.Flags, CONSOLE_AUTO_POSITION))
@@ -448,12 +448,11 @@ void Window::_CloseWindow() const
 // - NewWindow: the inclusive rect to use as the new viewport in the buffer
 // Return Value:
 // <none>
-void Window::ChangeViewport(const SMALL_RECT NewWindow)
+void Window::ChangeViewport(const til::inclusive_rect NewWindow)
 {
     const CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
     SCREEN_INFORMATION& ScreenInfo = GetScreenInfo();
-
-    COORD const FontSize = ScreenInfo.GetScreenFontSize();
+    const auto viewport = ScreenInfo.GetViewport();
 
     if (WI_IsFlagClear(gci.Flags, CONSOLE_IS_ICONIC))
     {
@@ -464,13 +463,12 @@ void Window::ChangeViewport(const SMALL_RECT NewWindow)
         IAccessibilityNotifier* pNotifier = ServiceLocator::LocateAccessibilityNotifier();
         if (pNotifier != nullptr)
         {
-            pNotifier->NotifyConsoleUpdateScrollEvent(ScreenInfo.GetViewport().Left() - NewWindow.Left,
-                                                      ScreenInfo.GetViewport().Top() - NewWindow.Top);
+            //pNotifier->NotifyConsoleUpdateScrollEvent(viewport.Left() - NewWindow.left, viewport.Top() - NewWindow.top);
         }
 
         // The new window is OK. Store it in screeninfo and refresh screen.
         ScreenInfo.SetViewport(Viewport::FromInclusive(NewWindow), false);
-        Tracing::s_TraceWindowViewport(ScreenInfo.GetViewport());
+        Tracing::s_TraceWindowViewport(viewport);
 
         if (ServiceLocator::LocateGlobals().pRender != nullptr)
         {
@@ -483,7 +481,7 @@ void Window::ChangeViewport(const SMALL_RECT NewWindow)
     {
         // we're iconic
         ScreenInfo.SetViewport(Viewport::FromInclusive(NewWindow), false);
-        Tracing::s_TraceWindowViewport(ScreenInfo.GetViewport());
+        Tracing::s_TraceWindowViewport(viewport);
     }
 
     LOG_IF_FAILED(ConsoleImeResizeCompStrView());
@@ -497,7 +495,7 @@ void Window::ChangeViewport(const SMALL_RECT NewWindow)
 // - Size of the window in characters (relative to the current font)
 // Return Value:
 // - <none>
-void Window::UpdateWindowSize(const COORD coordSizeInChars)
+void Window::UpdateWindowSize(const til::size coordSizeInChars)
 {
     GetScreenInfo().SetViewportSize(&coordSizeInChars);
 
@@ -629,8 +627,8 @@ void Window::_UpdateWindowSize(const SIZE sizeNew)
 
         // Now do the multiplication of characters times pixels per char. This is the client area pixel size.
         SIZE WindowSize;
-        WindowSize.cx = WindowDimensions.X * ScreenFontSize.X;
-        WindowSize.cy = WindowDimensions.Y * ScreenFontSize.Y;
+        WindowSize.cx = WindowDimensions.width * ScreenFontSize.width;
+        WindowSize.cy = WindowDimensions.height * ScreenFontSize.height;
 
         // Fill a rectangle to call the system to adjust the client rect into a window rect
         RECT rectSizeTemp = { 0 };
@@ -643,7 +641,7 @@ void Window::_UpdateWindowSize(const SIZE sizeNew)
         WindowSize.cx = RECT_WIDTH(&rectSizeTemp);
         WindowSize.cy = RECT_HEIGHT(&rectSizeTemp);
 
-        if (WindowDimensions.Y != 0)
+        if (WindowDimensions.height != 0)
         {
             // We want the alt to have scroll bars if the main has scroll bars.
             // The bars are disabled, but they're still there.
@@ -666,8 +664,8 @@ void Window::_UpdateWindowSize(const SIZE sizeNew)
 
         // To figure out if it's substantial, calculate what the window size would be if it were one character larger than what we just proposed
         SIZE WindowSizeMax;
-        WindowSizeMax.cx = WindowSize.cx + ScreenFontSize.X;
-        WindowSizeMax.cy = WindowSize.cy + ScreenFontSize.Y;
+        WindowSizeMax.cx = WindowSize.cx + ScreenFontSize.width;
+        WindowSizeMax.cy = WindowSize.cy + ScreenFontSize.height;
 
         // And figure out the current window size as well.
         RECT const rcWindowCurrent = GetWindowRect();
@@ -732,7 +730,7 @@ void Window::_UpdateWindowSize(const SIZE sizeNew)
 void Window::VerticalScroll(const WORD wScrollCommand, const WORD wAbsoluteChange)
 {
     CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
-    COORD NewOrigin;
+    til::point NewOrigin;
     SCREEN_INFORMATION& ScreenInfo = GetScreenInfo();
 
     // Log a telemetry event saying the user interacted with the Console
@@ -742,57 +740,57 @@ void Window::VerticalScroll(const WORD wScrollCommand, const WORD wAbsoluteChang
 
     NewOrigin = viewport.Origin();
 
-    const SHORT sScreenBufferSizeY = ScreenInfo.GetBufferSize().Height();
+    const auto sScreenBufferSizeY = ScreenInfo.GetBufferSize().Height();
 
     switch (wScrollCommand)
     {
     case SB_LINEUP:
     {
-        NewOrigin.Y--;
+        NewOrigin.y--;
         break;
     }
 
     case SB_LINEDOWN:
     {
-        NewOrigin.Y++;
+        NewOrigin.y++;
         break;
     }
 
     case SB_PAGEUP:
     {
-        NewOrigin.Y -= viewport.Height() - 1;
+        NewOrigin.y -= viewport.Height() - 1;
         break;
     }
 
     case SB_PAGEDOWN:
     {
-        NewOrigin.Y += viewport.Height() - 1;
+        NewOrigin.y += viewport.Height() - 1;
         break;
     }
 
     case SB_THUMBTRACK:
     {
         gci.Flags |= CONSOLE_SCROLLBAR_TRACKING;
-        NewOrigin.Y = wAbsoluteChange;
+        NewOrigin.y = wAbsoluteChange;
         break;
     }
 
     case SB_THUMBPOSITION:
     {
         UnblockWriteConsole(CONSOLE_SCROLLBAR_TRACKING);
-        NewOrigin.Y = wAbsoluteChange;
+        NewOrigin.y = wAbsoluteChange;
         break;
     }
 
     case SB_TOP:
     {
-        NewOrigin.Y = 0;
+        NewOrigin.y = 0;
         break;
     }
 
     case SB_BOTTOM:
     {
-        NewOrigin.Y = sScreenBufferSizeY - viewport.Height();
+        NewOrigin.y = sScreenBufferSizeY - viewport.Height();
         break;
     }
 
@@ -802,7 +800,7 @@ void Window::VerticalScroll(const WORD wScrollCommand, const WORD wAbsoluteChang
     }
     }
 
-    NewOrigin.Y = std::clamp(NewOrigin.Y, 0i16, gsl::narrow<SHORT>(sScreenBufferSizeY - viewport.Height()));
+    NewOrigin.y = std::clamp(NewOrigin.y, 0, sScreenBufferSizeY - viewport.Height());
     LOG_IF_FAILED(ScreenInfo.SetViewportOrigin(true, NewOrigin, false));
 }
 
@@ -819,52 +817,52 @@ void Window::HorizontalScroll(const WORD wScrollCommand, const WORD wAbsoluteCha
     Telemetry::Instance().SetUserInteractive();
 
     SCREEN_INFORMATION& ScreenInfo = GetScreenInfo();
-    const SHORT sScreenBufferSizeX = ScreenInfo.GetBufferSize().Width();
+    const auto sScreenBufferSizeX = ScreenInfo.GetBufferSize().Width();
     const auto& viewport = ScreenInfo.GetViewport();
-    COORD NewOrigin = viewport.Origin();
+    auto NewOrigin = viewport.Origin();
 
     switch (wScrollCommand)
     {
     case SB_LINEUP:
     {
-        NewOrigin.X--;
+        NewOrigin.x--;
         break;
     }
 
     case SB_LINEDOWN:
     {
-        NewOrigin.X++;
+        NewOrigin.x++;
         break;
     }
 
     case SB_PAGEUP:
     {
-        NewOrigin.X -= viewport.Width() - 1;
+        NewOrigin.x -= viewport.Width() - 1;
         break;
     }
 
     case SB_PAGEDOWN:
     {
-        NewOrigin.X += viewport.Width() - 1;
+        NewOrigin.x += viewport.Width() - 1;
         break;
     }
 
     case SB_THUMBTRACK:
     case SB_THUMBPOSITION:
     {
-        NewOrigin.X = wAbsoluteChange;
+        NewOrigin.x = wAbsoluteChange;
         break;
     }
 
     case SB_TOP:
     {
-        NewOrigin.X = 0;
+        NewOrigin.x = 0;
         break;
     }
 
     case SB_BOTTOM:
     {
-        NewOrigin.X = (WORD)(sScreenBufferSizeX - viewport.Width());
+        NewOrigin.x = sScreenBufferSizeX - viewport.Width();
         break;
     }
 
@@ -873,7 +871,7 @@ void Window::HorizontalScroll(const WORD wScrollCommand, const WORD wAbsoluteCha
         return;
     }
     }
-    NewOrigin.X = std::clamp(NewOrigin.X, 0i16, gsl::narrow<SHORT>(sScreenBufferSizeX - viewport.Width()));
+    NewOrigin.x = std::clamp(NewOrigin.x, 0, sScreenBufferSizeX - viewport.Width());
     LOG_IF_FAILED(ScreenInfo.SetViewportOrigin(true, NewOrigin, false));
 }
 
@@ -921,13 +919,13 @@ void Window::s_ConvertWindowPosToWindowRect(const LPWINDOWPOS lpWindowPos, _Out_
 // - prectWindow - rectangle to fill with pixel positions of the outer edge rectangle for this window
 // Return Value:
 // - <none>
-void Window::_CalculateWindowRect(const COORD coordWindowInChars, _Inout_ RECT* const prectWindow) const
+void Window::_CalculateWindowRect(const til::size coordWindowInChars, _Inout_ RECT* const prectWindow) const
 {
     auto& g = ServiceLocator::LocateGlobals();
     const SCREEN_INFORMATION& siAttached = GetScreenInfo();
-    const COORD coordFontSize = siAttached.GetScreenFontSize();
+    const auto coordFontSize = siAttached.GetScreenFontSize();
     const HWND hWnd = GetWindowHandle();
-    const COORD coordBufferSize = siAttached.GetBufferSize().Dimensions();
+    const auto coordBufferSize = siAttached.GetBufferSize().Dimensions();
     const int iDpi = g.dpi;
 
     s_CalculateWindowRect(coordWindowInChars, iDpi, coordFontSize, coordBufferSize, hWnd, prectWindow);
@@ -949,18 +947,15 @@ void Window::_CalculateWindowRect(const COORD coordWindowInChars, _Inout_ RECT* 
 //      rectangle for this window
 // Return Value:
 // - <none>
-void Window::s_CalculateWindowRect(const COORD coordWindowInChars,
+void Window::s_CalculateWindowRect(const til::size coordWindowInChars,
                                    const int iDpi,
-                                   const COORD coordFontSize,
-                                   const COORD coordBufferSize,
+                                   const til::size coordFontSize,
+                                   const til::size coordBufferSize,
                                    _In_opt_ HWND const hWnd,
                                    _Inout_ RECT* const prectWindow)
 {
-    SIZE sizeWindow;
-
     // Initially use the given size in characters * font size to get client area pixel size
-    sizeWindow.cx = coordWindowInChars.X * coordFontSize.X;
-    sizeWindow.cy = coordWindowInChars.Y * coordFontSize.Y;
+    const auto sizeWindow = (coordWindowInChars * coordFontSize).to_win32_size();
 
     // Create a proposed rectangle
     RECT rectProposed = { prectWindow->left, prectWindow->top, prectWindow->left + sizeWindow.cx, prectWindow->top + sizeWindow.cy };
@@ -985,15 +980,15 @@ void Window::s_CalculateWindowRect(const COORD coordWindowInChars,
     // Finally compensate for scroll bars
 
     // If the window is smaller than the buffer in width, add space at the bottom for a horizontal scroll bar
-    if (coordWindowInChars.X < coordBufferSize.X)
+    if (coordWindowInChars.width < coordBufferSize.width)
     {
-        rectProposed.bottom += (SHORT)ServiceLocator::LocateHighDpiApi<WindowDpiApi>()->GetSystemMetricsForDpi(SM_CYHSCROLL, iDpi);
+        rectProposed.bottom += ServiceLocator::LocateHighDpiApi<WindowDpiApi>()->GetSystemMetricsForDpi(SM_CYHSCROLL, iDpi);
     }
 
     // If the window is smaller than the buffer in height, add space at the right for a vertical scroll bar
-    if (coordWindowInChars.Y < coordBufferSize.Y)
+    if (coordWindowInChars.height < coordBufferSize.height)
     {
-        rectProposed.right += (SHORT)ServiceLocator::LocateHighDpiApi<WindowDpiApi>()->GetSystemMetricsForDpi(SM_CXVSCROLL, iDpi);
+        rectProposed.right += ServiceLocator::LocateHighDpiApi<WindowDpiApi>()->GetSystemMetricsForDpi(SM_CXVSCROLL, iDpi);
     }
 
     // Apply the calculated sizes to the existing window pointer
@@ -1280,7 +1275,7 @@ void Window::s_ReinitializeFontsForDPIChange()
         // Save window size
         auto windowRect = pWindow->GetWindowRect();
         const auto windowDimensions = gci.GetActiveOutputBuffer().GetViewport().Dimensions();
-        DWORD dwValue = MAKELONG(windowDimensions.X, windowDimensions.Y);
+        DWORD dwValue = MAKELONG(windowDimensions.width, windowDimensions.height);
         Status = RegistrySerialization::s_UpdateValue(hConsoleKey,
                                                       hTitleKey,
                                                       CONSOLE_REGISTRY_WINDOWSIZE,
@@ -1289,9 +1284,9 @@ void Window::s_ReinitializeFontsForDPIChange()
                                                       static_cast<DWORD>(sizeof(dwValue)));
         if (NT_SUCCESS(Status))
         {
-            const COORD coordScreenBufferSize = gci.GetActiveOutputBuffer().GetBufferSize().Dimensions();
-            auto screenBufferWidth = coordScreenBufferSize.X;
-            auto screenBufferHeight = coordScreenBufferSize.Y;
+            const auto coordScreenBufferSize = gci.GetActiveOutputBuffer().GetBufferSize().Dimensions();
+            auto screenBufferWidth = coordScreenBufferSize.width;
+            auto screenBufferHeight = coordScreenBufferSize.height;
             dwValue = MAKELONG(screenBufferWidth, screenBufferHeight);
             Status = RegistrySerialization::s_UpdateValue(hConsoleKey,
                                                           hTitleKey,

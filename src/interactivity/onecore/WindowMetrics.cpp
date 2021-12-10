@@ -32,9 +32,9 @@ RECT WindowMetrics::GetMinClientRectInPixels()
     // If we get information from the Server, great. We'll calculate
     // the values for that at the end.
     // If we don't... then at least we have a non-zero rectangle.
-    COORD FontSize = { 0 };
-    FontSize.X = HEADLESS_FONT_SIZE_WIDTH;
-    FontSize.Y = HEADLESS_FONT_SIZE_HEIGHT;
+    til::point FontSize;
+    FontSize.x = HEADLESS_FONT_SIZE_WIDTH;
+    FontSize.y = HEADLESS_FONT_SIZE_HEIGHT;
 
     RECT DisplaySize = { 0 };
     DisplaySize.right = HEADLESS_DISPLAY_SIZE_WIDTH;
@@ -84,8 +84,8 @@ RECT WindowMetrics::GetMinClientRectInPixels()
                 DisplaySize.bottom = DisplaySizeIoctl.Height;
                 DisplaySize.right = DisplaySizeIoctl.Width;
 
-                FontSize.X = (SHORT)FontSizeIoctl.Width;
-                FontSize.Y = (SHORT)FontSizeIoctl.Height;
+                FontSize.x = FontSizeIoctl.Width;
+                FontSize.y = FontSizeIoctl.Height;
             }
         }
         else
@@ -112,8 +112,8 @@ RECT WindowMetrics::GetMinClientRectInPixels()
     }
 
     // The result is expected to be in pixels, not rows/columns.
-    DisplaySize.right *= FontSize.X;
-    DisplaySize.bottom *= FontSize.Y;
+    DisplaySize.right *= FontSize.x;
+    DisplaySize.bottom *= FontSize.y;
 
     return DisplaySize;
 }

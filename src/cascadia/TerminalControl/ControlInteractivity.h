@@ -123,11 +123,11 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         // terminal.
         bool _selectionNeedsToBeCopied;
 
-        std::optional<COORD> _lastHoveredCell{ std::nullopt };
+        std::optional<til::point> _lastHoveredCell{ std::nullopt };
         // Track the last hyperlink ID we hovered over
         uint16_t _lastHoveredId{ 0 };
 
-        std::optional<interval_tree::IntervalTree<til::point, size_t>::interval> _lastHoveredInterval{ std::nullopt };
+        std::optional<interval_tree::IntervalTree<til::point, til::CoordType>::interval> _lastHoveredInterval{ std::nullopt };
 
         unsigned int _numberOfClicks(til::point clickPos, Timestamp clickTime);
         void _updateSystemParameterSettings() noexcept;
@@ -142,7 +142,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         bool _canSendVTMouseInput(const ::Microsoft::Terminal::Core::ControlKeyStates modifiers);
 
         void _sendPastedTextToConnection(std::wstring_view wstr);
-        til::point _getTerminalPosition(const til::point& pixelPosition);
+        til::point _getTerminalPosition(const til::point pixelPosition);
 
         bool _sendMouseEventHelper(const til::point terminalPosition,
                                    const unsigned int pointerUpdateKind,

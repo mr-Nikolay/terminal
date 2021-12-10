@@ -38,7 +38,7 @@ public:
     [[nodiscard]] virtual LRESULT MessageHandler(UINT const message, WPARAM const wparam, LPARAM const lparam) noexcept override;
 
     virtual RECT GetNonClientFrame(UINT dpi) const noexcept override;
-    virtual SIZE GetTotalNonClientExclusiveSize(UINT dpi) const noexcept override;
+    virtual til::size GetTotalNonClientExclusiveSize(UINT dpi) const noexcept override;
 
     void Initialize() override;
 
@@ -48,7 +48,7 @@ public:
     void OnApplicationThemeChanged(const winrt::Windows::UI::Xaml::ElementTheme& requestedTheme) override;
 
 private:
-    std::optional<COORD> _oldIslandPos;
+    std::optional<til::point> _oldIslandPos;
 
     winrt::TerminalApp::TitlebarControl _titlebar{ nullptr };
     winrt::Windows::UI::Xaml::UIElement _clientContent{ nullptr };
@@ -72,7 +72,7 @@ private:
     int _GetResizeHandleHeight() const noexcept;
     RECT _GetDragAreaRect() const noexcept;
     int _GetTopBorderHeight() const noexcept;
-    LRESULT _dragBarNcHitTest(const til::point& pointer);
+    LRESULT _dragBarNcHitTest(const til::point pointer);
 
     [[nodiscard]] LRESULT _OnNcCreate(WPARAM wParam, LPARAM lParam) noexcept override;
     [[nodiscard]] LRESULT _OnNcCalcSize(const WPARAM wParam, const LPARAM lParam) noexcept;

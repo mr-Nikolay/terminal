@@ -355,18 +355,18 @@ std::wostream& operator<<(std::wostream& stream, const KeyEvent* const pKeyEvent
 class MouseEvent : public IInputEvent
 {
 public:
-    constexpr MouseEvent(const MOUSE_EVENT_RECORD& record) :
-        _position{ record.dwMousePosition },
+    MouseEvent(const MOUSE_EVENT_RECORD& record) :
+        _position{ til::wrap_coord(record.dwMousePosition) },
         _buttonState{ record.dwButtonState },
         _activeModifierKeys{ record.dwControlKeyState },
         _eventFlags{ record.dwEventFlags }
     {
     }
 
-    constexpr MouseEvent(const COORD position,
-                         const DWORD buttonState,
-                         const DWORD activeModifierKeys,
-                         const DWORD eventFlags) :
+    MouseEvent(const til::point position,
+               const DWORD buttonState,
+               const DWORD activeModifierKeys,
+               const DWORD eventFlags) :
         _position{ position },
         _buttonState{ buttonState },
         _activeModifierKeys{ activeModifierKeys },
@@ -388,7 +388,7 @@ public:
         return _eventFlags == MOUSE_MOVED;
     }
 
-    constexpr COORD GetPosition() const noexcept
+    til::point GetPosition() const noexcept
     {
         return _position;
     }
@@ -408,13 +408,13 @@ public:
         return _eventFlags;
     }
 
-    void SetPosition(const COORD position) noexcept;
+    void SetPosition(const til::point position) noexcept;
     void SetButtonState(const DWORD buttonState) noexcept;
     void SetActiveModifierKeys(const DWORD activeModifierKeys) noexcept;
     void SetEventFlags(const DWORD eventFlags) noexcept;
 
 private:
-    COORD _position;
+    til::point _position;
     DWORD _buttonState;
     DWORD _activeModifierKeys;
     DWORD _eventFlags;
@@ -431,12 +431,12 @@ std::wostream& operator<<(std::wostream& stream, const MouseEvent* const pMouseE
 class WindowBufferSizeEvent : public IInputEvent
 {
 public:
-    constexpr WindowBufferSizeEvent(const WINDOW_BUFFER_SIZE_RECORD& record) :
-        _size{ record.dwSize }
+    WindowBufferSizeEvent(const WINDOW_BUFFER_SIZE_RECORD& record) :
+        _size{ til::wrap_coord_size(record.dwSize) }
     {
     }
 
-    constexpr WindowBufferSizeEvent(const COORD size) :
+    WindowBufferSizeEvent(const til::size size) :
         _size{ size }
     {
     }
@@ -450,15 +450,15 @@ public:
     INPUT_RECORD ToInputRecord() const noexcept override;
     InputEventType EventType() const noexcept override;
 
-    constexpr COORD GetSize() const noexcept
+    til::size GetSize() const noexcept
     {
         return _size;
     }
 
-    void SetSize(const COORD size) noexcept;
+    void SetSize(const til::size size) noexcept;
 
 private:
-    COORD _size;
+    til::size _size;
 
 #ifdef UNIT_TESTING
     friend std::wostream& operator<<(std::wostream& stream, const WindowBufferSizeEvent* const pEvent);

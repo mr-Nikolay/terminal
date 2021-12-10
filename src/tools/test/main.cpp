@@ -33,14 +33,14 @@ int TestSetViewport(HANDLE /*hIn*/, HANDLE hOut)
     bool fSuccess = GetConsoleScreenBufferInfoEx(hOut, &csbiex);
     if (fSuccess)
     {
-        const SMALL_RECT Screen = csbiex.srWindow;
-        const short sWidth = Screen.Right - Screen.Left;
-        const short sHeight = Screen.Bottom - Screen.Top;
+        const auto Screen = csbiex.srWindow;
+        const auto sWidth = Screen.right - Screen.left;
+        const auto sHeight = Screen.bottom - Screen.top;
 
-        csbiex.srWindow.Top = 50;
-        csbiex.srWindow.Bottom = sHeight + 50;
-        csbiex.srWindow.Left = 0;
-        csbiex.srWindow.Right = sWidth;
+        csbiex.srWindow.top = 50;
+        csbiex.srWindow.bottom = sHeight + 50;
+        csbiex.srWindow.left = 0;
+        csbiex.srWindow.right = sWidth;
 
         SetConsoleScreenBufferInfoEx(hOut, &csbiex);
     }

@@ -18,7 +18,7 @@
 VtConsole::VtConsole(PipeReadCallback const pfnReadCallback,
                      bool const fHeadless,
                      bool const fUseConpty,
-                     COORD const initialSize) :
+                     til::point initialSize) :
     _pfnReadCallback(pfnReadCallback),
     _fHeadless(fHeadless),
     _fUseConPty(fUseConpty),
@@ -64,7 +64,7 @@ HRESULT AttachPseudoConsole(HPCON hPC, LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeL
 // - phInput: Receives the handle to the newly-created anonymous pipe for writing input to the conpty.
 // - phOutput: Receives the handle to the newly-created anonymous pipe for reading the output of the conpty.
 // - phPty: Receives a token value to identify this conpty
-HRESULT CreatePseudoConsoleAndHandles(COORD size,
+HRESULT CreatePseudoConsoleAndHandles(til::point size,
                                       _In_ DWORD dwFlags,
                                       _Out_ HANDLE* phInput,
                                       _Out_ HANDLE* phOutput,
@@ -205,8 +205,8 @@ void VtConsole::_createConptyManually(const std::wstring& command)
     if (_fHeadless)
     {
         THROW_IF_FAILED(CreateConPty(command,
-                                     _lastDimensions.X,
-                                     _lastDimensions.Y,
+                                     _lastDimensions.x,
+                                     _lastDimensions.y,
                                      &_inPipe,
                                      &_outPipe,
                                      &_signalPipe,
@@ -270,15 +270,15 @@ void VtConsole::_createConptyViaCommandline(const std::wstring& command)
     si.hStdError = outPipeConhostSide.get();
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    if (!(_lastDimensions.X == 0 && _lastDimensions.Y == 0))
+    if (!(_lastDimensions.x == 0 && _lastDimensions.y == 0))
     {
         // STARTF_USECOUNTCHARS does not work.
         // minkernel/console/client/dllinit will write that value to conhost
         //  during init of a cmdline application, but because we're starting
         //  conhost directly, that doesn't work for us.
         std::wstringstream ss;
-        ss << L" --width " << _lastDimensions.X;
-        ss << L" --height " << _lastDimensions.Y;
+        ss << L" --width " << _lastDimensions.x;
+        ss << L" --height " << _lastDimensions.y;
         cmdline += ss.str();
     }
 
@@ -368,7 +368,7 @@ bool VtConsole::Resize(const unsigned short rows, const unsigned short cols)
 {
     if (_fUseConPty)
     {
-        return SUCCEEDED(ResizePseudoConsole(_hPC, { (SHORT)cols, (SHORT)rows }));
+        return SUCCEEDED(ResizePseudoConsole(_hPC, { cols, rows }));
     }
     else
     {

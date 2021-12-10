@@ -30,12 +30,12 @@ Microsoft::Console::Types::Viewport RenderData::GetViewport() noexcept
 // - Retrieves the end position of the text buffer. We use
 //   the cursor position as the text buffer end position
 // Return Value:
-// - COORD of the end position of the text buffer
-COORD RenderData::GetTextBufferEndPosition() const noexcept
+// - til::point of the end position of the text buffer
+til::point RenderData::GetTextBufferEndPosition() const noexcept
 {
     const CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
     Viewport bufferSize = gci.GetActiveOutputBuffer().GetBufferSize();
-    COORD endPosition{ bufferSize.Width() - 1, bufferSize.BottomInclusive() };
+    til::point endPosition{ bufferSize.Width() - 1, bufferSize.BottomInclusive() };
     return endPosition;
 }
 
@@ -119,7 +119,7 @@ const TextAttribute RenderData::GetDefaultBrushColors() noexcept
 // - <none>
 // Return Value:
 // - the cursor's position in the buffer relative to the buffer origin.
-COORD RenderData::GetCursorPosition() const noexcept
+til::point RenderData::GetCursorPosition() const noexcept
 {
     const CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
     const auto& cursor = gci.GetActiveOutputBuffer().GetTextBuffer().GetCursor();
@@ -348,7 +348,7 @@ const std::wstring RenderData::GetHyperlinkCustomId(uint16_t id) const noexcept
 }
 
 // For now, we ignore regex patterns in conhost
-const std::vector<size_t> RenderData::GetPatternId(const COORD /*location*/) const noexcept
+const std::vector<size_t> RenderData::GetPatternId(const til::point /*location*/) const noexcept
 {
     return {};
 }
@@ -401,7 +401,7 @@ void RenderData::ClearSelection()
 // - coordEnd - Position to select up to
 // Return Value:
 // - <none>
-void RenderData::SelectNewRegion(const COORD coordStart, const COORD coordEnd)
+void RenderData::SelectNewRegion(const til::point coordStart, const til::point coordEnd)
 {
     Selection::Instance().SelectNewRegion(coordStart, coordEnd);
 }
@@ -412,7 +412,7 @@ void RenderData::SelectNewRegion(const COORD coordStart, const COORD coordEnd)
 // - none
 // Return Value:
 // - current selection anchor
-const COORD RenderData::GetSelectionAnchor() const noexcept
+const til::point RenderData::GetSelectionAnchor() const noexcept
 {
     return Selection::Instance().GetSelectionAnchor();
 }
@@ -423,7 +423,7 @@ const COORD RenderData::GetSelectionAnchor() const noexcept
 // - none
 // Return Value:
 // - current selection anchor
-const COORD RenderData::GetSelectionEnd() const noexcept
+const til::point RenderData::GetSelectionEnd() const noexcept
 {
     // The selection area in ConHost is encoded as two things...
     //  - SelectionAnchor: the initial position where the selection was started
@@ -450,8 +450,8 @@ const COORD RenderData::GetSelectionEnd() const noexcept
     // Then choose the opposite corner.
     const auto anchor = Selection::Instance().GetSelectionAnchor();
 
-    const short x_pos = (selectionRect.Left == anchor.X) ? selectionRect.Right : selectionRect.Left;
-    const short y_pos = (selectionRect.Top == anchor.Y) ? selectionRect.Bottom : selectionRect.Top;
+    const auto x_pos = (selectionRect.left == anchor.x) ? selectionRect.right : selectionRect.left;
+    const auto y_pos = (selectionRect.top == anchor.y) ? selectionRect.bottom : selectionRect.top;
 
     return { x_pos, y_pos };
 }
@@ -464,7 +464,7 @@ const COORD RenderData::GetSelectionEnd() const noexcept
 // - coordSelectionStart - Anchor point (start of selection) for the region to be colored
 // - coordSelectionEnd - Other point referencing the rectangle inscribing the selection area
 // - attr - Color to apply to region.
-void RenderData::ColorSelection(const COORD coordSelectionStart, const COORD coordSelectionEnd, const TextAttribute attr)
+void RenderData::ColorSelection(const til::point coordSelectionStart, const til::point coordSelectionEnd, const TextAttribute attr)
 {
     Selection::Instance().ColorSelection(coordSelectionStart, coordSelectionEnd, attr);
 }

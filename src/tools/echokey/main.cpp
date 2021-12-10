@@ -238,20 +238,20 @@ void handleKeyEventW(KEY_EVENT_RECORD keyEvent)
 
 void handleWindowEvent(WINDOW_BUFFER_SIZE_RECORD windowEvent)
 {
-    SHORT bufferWidth = windowEvent.dwSize.X;
-    SHORT bufferHeight = windowEvent.dwSize.Y;
+    auto bufferWidth = windowEvent.dwSize.x;
+    auto bufferHeight = windowEvent.dwSize.y;
 
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
     bool fSuccess = !!GetConsoleScreenBufferInfoEx(g_hOut, &csbiex);
     if (fSuccess)
     {
-        SMALL_RECT srViewport = csbiex.srWindow;
+        auto srViewport = csbiex.srWindow;
 
-        unsigned short viewX = srViewport.Left;
-        unsigned short viewY = srViewport.Top;
-        unsigned short viewWidth = srViewport.Right - srViewport.Left + 1;
-        unsigned short viewHeight = srViewport.Bottom - srViewport.Top + 1;
+        unsigned auto viewX = srViewport.left;
+        unsigned auto viewY = srViewport.top;
+        unsigned auto viewWidth = srViewport.right - srViewport.left + 1;
+        unsigned auto viewHeight = srViewport.bottom - srViewport.top + 1;
         wprintf(L"BufferSize: (%d,%d) Viewport:(x, y, w, h)=(%d,%d,%d,%d)\r\n",
                 bufferWidth,
                 bufferHeight,

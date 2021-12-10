@@ -21,28 +21,28 @@ public:
     bool PushGraphicsRendition(const ::Microsoft::Console::VirtualTerminal::VTParameters options) noexcept override;
     bool PopGraphicsRendition() noexcept override;
 
-    bool CursorPosition(const size_t line,
-                        const size_t column) noexcept override; // CUP
+    bool CursorPosition(const int line,
+                        const int column) noexcept override; // CUP
 
     bool EnableWin32InputMode(const bool win32InputMode) noexcept override; // win32-input-mode
 
     bool CursorVisibility(const bool isVisible) noexcept override; // DECTCEM
     bool EnableCursorBlinking(const bool enable) noexcept override; // ATT610
 
-    bool CursorForward(const size_t distance) noexcept override;
-    bool CursorBackward(const size_t distance) noexcept override;
-    bool CursorUp(const size_t distance) noexcept override;
+    bool CursorForward(const int distance) noexcept override;
+    bool CursorBackward(const int distance) noexcept override;
+    bool CursorUp(const int distance) noexcept override;
 
     bool LineFeed(const ::Microsoft::Console::VirtualTerminal::DispatchTypes::LineFeedType lineFeedType) noexcept override;
 
-    bool EraseCharacters(const size_t numChars) noexcept override;
+    bool EraseCharacters(const int numChars) noexcept override;
     bool WarningBell() noexcept override;
     bool CarriageReturn() noexcept override;
     bool SetWindowTitle(std::wstring_view title) noexcept override;
 
     bool HorizontalTabSet() noexcept override; // HTS
-    bool ForwardTab(const size_t numTabs) noexcept override; // CHT, HT
-    bool BackwardsTab(const size_t numTabs) noexcept override; // CBT
+    bool ForwardTab(const int numTabs) noexcept override; // CHT, HT
+    bool BackwardsTab(const int numTabs) noexcept override; // CBT
     bool TabClear(const ::Microsoft::Console::VirtualTerminal::DispatchTypes::TabClearType clearType) noexcept override; // TBC
 
     bool SetColorTableEntry(const size_t tableIndex, const DWORD color) noexcept override;
@@ -54,8 +54,8 @@ public:
     bool SetDefaultForeground(const DWORD color) noexcept override;
     bool SetDefaultBackground(const DWORD color) noexcept override;
     bool EraseInLine(const ::Microsoft::Console::VirtualTerminal::DispatchTypes::EraseType eraseType) noexcept override; // ED
-    bool DeleteCharacter(const size_t count) noexcept override;
-    bool InsertCharacter(const size_t count) noexcept override;
+    bool DeleteCharacter(const int count) noexcept override;
+    bool InsertCharacter(const int count) noexcept override;
     bool EraseInDisplay(const ::Microsoft::Console::VirtualTerminal::DispatchTypes::EraseType eraseType) noexcept override;
 
     bool SetCursorKeysMode(const bool applicationMode) noexcept override; // DECCKM

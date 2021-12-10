@@ -57,12 +57,12 @@ PCWSTR TryReadConsoleOutputW(_Out_ BOOL* const pbResult,
 {
     DWORD cCharInfos = 1;
     std::unique_ptr<CHAR_INFO[]> rgCharInfos = std::make_unique<CHAR_INFO[]>(cCharInfos);
-    COORD coordBuffer;
-    coordBuffer.X = 1;
-    coordBuffer.Y = 1;
+    til::point coordBuffer;
+    coordBuffer.x = 1;
+    coordBuffer.y = 1;
 
-    COORD coordRead = { 0 };
-    SMALL_RECT srReadRegion = { 0 };
+    til::point coordRead;
+    til::inclusive_rect srReadRegion;
 
     SetLastError(0);
     *pbResult = ReadConsoleOutputW(GetStdHandle(STD_OUTPUT_HANDLE),
@@ -79,12 +79,12 @@ PCWSTR TryReadConsoleOutputA(_Out_ BOOL* const pbResult,
 {
     DWORD cCharInfos = 1;
     std::unique_ptr<CHAR_INFO[]> rgCharInfos = std::make_unique<CHAR_INFO[]>(cCharInfos);
-    COORD coordBuffer;
-    coordBuffer.X = 1;
-    coordBuffer.Y = 1;
+    til::point coordBuffer;
+    coordBuffer.x = 1;
+    coordBuffer.y = 1;
 
-    COORD coordRead = { 0 };
-    SMALL_RECT srReadRegion = { 0 };
+    til::point coordRead;
+    til::inclusive_rect srReadRegion;
 
     SetLastError(0);
     *pbResult = ReadConsoleOutputA(GetStdHandle(STD_OUTPUT_HANDLE),
@@ -101,7 +101,7 @@ PCWSTR TryReadConsoleOutputCharacterW(_Out_ BOOL* const pbResult,
 {
     DWORD cchTest = 1;
     std::unique_ptr<wchar_t[]> pwszTest = std::make_unique<wchar_t[]>(cchTest);
-    COORD coordRead = { 0 };
+    til::point coordRead;
     DWORD dwRead = 0;
 
     SetLastError(0);
@@ -119,7 +119,7 @@ PCWSTR TryReadConsoleOutputCharacterA(_Out_ BOOL* const pbResult,
 {
     DWORD cchTest = 1;
     std::unique_ptr<char[]> pszTest = std::make_unique<char[]>(cchTest);
-    COORD coordRead = { 0 };
+    til::point coordRead;
     DWORD dwRead = 0;
 
     SetLastError(0);
@@ -137,7 +137,7 @@ PCWSTR TryReadConsoleOutputAttribute(_Out_ BOOL* const pbResult,
 {
     DWORD cchTest = 1;
     std::unique_ptr<WORD[]> rgwTest = std::make_unique<WORD[]>(cchTest);
-    COORD coordRead = { 0 };
+    til::point coordRead;
     DWORD dwRead = 0;
 
     SetLastError(0);

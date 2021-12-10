@@ -63,9 +63,9 @@ int __cdecl wmain(int /*argc*/, WCHAR* /*argv[]*/)
     bool fSuccess = !!GetConsoleScreenBufferInfoEx(hOut, &csbiex);
     if (fSuccess)
     {
-        SMALL_RECT srViewport = csbiex.srWindow;
-        short width = srViewport.Right - srViewport.Left + 1;
-        short height = srViewport.Bottom - srViewport.Top + 1;
+        auto srViewport = csbiex.srWindow;
+        auto width = srViewport.right - srViewport.left + 1;
+        auto height = srViewport.bottom - srViewport.top + 1;
 
         std::string topBorder = std::string(width, '-');
         std::string bottomBorder = std::string(width, '=');

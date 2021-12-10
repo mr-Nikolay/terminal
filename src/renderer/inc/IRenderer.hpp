@@ -32,18 +32,18 @@ namespace Microsoft::Console::Render
 
         [[nodiscard]] virtual HRESULT PaintFrame() = 0;
 
-        virtual void TriggerSystemRedraw(const RECT* const prcDirtyClient) = 0;
+        virtual void TriggerSystemRedraw(const til::rect& prcDirtyClient) = 0;
 
         virtual void TriggerRedraw(const Microsoft::Console::Types::Viewport& region) = 0;
-        virtual void TriggerRedraw(const COORD* const pcoord) = 0;
-        virtual void TriggerRedrawCursor(const COORD* const pcoord) = 0;
+        virtual void TriggerRedraw(const til::point* const pcoord) = 0;
+        virtual void TriggerRedrawCursor(const til::point* const pcoord) = 0;
 
         virtual void TriggerRedrawAll() = 0;
         virtual void TriggerTeardown() noexcept = 0;
 
         virtual void TriggerSelection() = 0;
         virtual void TriggerScroll() = 0;
-        virtual void TriggerScroll(const COORD* const pcoordDelta) = 0;
+        virtual void TriggerScroll(const til::point* const pcoordDelta) = 0;
         virtual void TriggerCircling() = 0;
         virtual void TriggerTitleChange() = 0;
         virtual void TriggerFontChange(const int iDpi,
@@ -51,7 +51,7 @@ namespace Microsoft::Console::Render
                                        _Out_ FontInfo& FontInfo) = 0;
 
         virtual void UpdateSoftFont(const gsl::span<const uint16_t> bitPattern,
-                                    const SIZE cellSize,
+                                    const til::size cellSize,
                                     const size_t centeringHint) = 0;
 
         [[nodiscard]] virtual HRESULT GetProposedFont(const int iDpi,

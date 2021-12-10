@@ -18,7 +18,7 @@ static LPCWSTR term_window_class = L"HwndTerminalClass";
 
 // This magic flag is "documented" at https://msdn.microsoft.com/en-us/library/windows/desktop/ms646301(v=vs.85).aspx
 // "If the high-order bit is 1, the key is down; otherwise, it is up."
-static constexpr short KeyPressed{ gsl::narrow_cast<short>(0x8000) };
+static constexpr short KeyPressed{ 0x8000 };
 
 static constexpr bool _IsMouseMessage(UINT uMsg)
 {
@@ -227,7 +227,7 @@ HRESULT HwndTerminal::Initialize()
     RECT windowRect;
     GetWindowRect(_hwnd.get(), &windowRect);
 
-    const COORD windowSize{ gsl::narrow<short>(windowRect.right - windowRect.left), gsl::narrow<short>(windowRect.bottom - windowRect.top) };
+    const til::point windowSize{ windowRect.right - windowRect.left, windowRect.bottom - windowRect.top };
 
     // Fist set up the dx engine with the window size in pixels.
     // Then, using the font, get the number of characters that can fit.
@@ -238,7 +238,7 @@ HRESULT HwndTerminal::Initialize()
 
     _terminal->SetBackgroundCallback([](auto) {});
 
-    _terminal->Create(COORD{ 80, 25 }, 1000, *_renderer);
+    _terminal->Create(til::point{ 80, 25 }, 1000, *_renderer);
     _terminal->SetColorTableEntry(TextColor::DEFAULT_BACKGROUND, RGB(12, 12, 12));
     _terminal->SetColorTableEntry(TextColor::DEFAULT_FOREGROUND, RGB(204, 204, 204));
     _terminal->SetWriteInputCallback([=](std::wstring& input) noexcept { _WriteTextToConnection(input); });
@@ -344,7 +344,7 @@ IRawElementProviderSimple* HwndTerminal::_GetUiaProvider() noexcept
     return _uiaProvider.Get();
 }
 
-HRESULT HwndTerminal::Refresh(const SIZE windowSize, _Out_ COORD* dimensions)
+HRESULT HwndTerminal::Refresh(const SIZE windowSize, _Out_ til::point* dimensions)
 {
     RETURN_HR_IF_NULL(E_INVALIDARG, dimensions);
 
@@ -359,7 +359,7 @@ HRESULT HwndTerminal::Refresh(const SIZE windowSize, _Out_ COORD* dimensions)
 
     // Convert our new dimensions to characters
     const auto viewInPixels = Viewport::FromDimensions({ 0, 0 },
-                                                       { gsl::narrow<short>(windowSize.cx), gsl::narrow<short>(windowSize.cy) });
+                                                       { windowSize.cx, windowSize.cy });
     const auto vp = _renderEngine->GetViewportInCharacters(viewInPixels);
 
     // If this function succeeds with S_FALSE, then the terminal didn't
@@ -369,8 +369,8 @@ HRESULT HwndTerminal::Refresh(const SIZE windowSize, _Out_ COORD* dimensions)
     // I believe we'll need support for CSI 2J, and additionally I think
     //      we're resetting the viewport to the top
     RETURN_IF_FAILED(_terminal->UserResize({ vp.Width(), vp.Height() }));
-    dimensions->X = vp.Width();
-    dimensions->Y = vp.Height();
+    dimensions->x = vp.Width();
+    dimensions->y = vp.Height();
 
     return S_OK;
 }
@@ -436,7 +436,7 @@ void _stdcall TerminalSendOutput(void* terminal, LPCWSTR data)
 /// <param name="height">New height of the terminal in pixels</param>
 /// <param name="dimensions">Out parameter containing the columns and rows that fit the new size.</param>
 /// <returns>HRESULT of the attempted resize.</returns>
-HRESULT _stdcall TerminalTriggerResize(_In_ void* terminal, _In_ short width, _In_ short height, _Out_ COORD* dimensions)
+HRESULT _stdcall TerminalTriggerResize(_In_ void* terminal, _In_ short width, _In_ short height, _Out_ til::point* dimensions)
 {
     const auto publicTerminal = static_cast<HwndTerminal*>(terminal);
 
@@ -460,19 +460,19 @@ HRESULT _stdcall TerminalTriggerResize(_In_ void* terminal, _In_ short width, _I
 /// <param name="dimensionsInCharacters">New terminal size in row and column count.</param>
 /// <param name="dimensionsInPixels">Out parameter with the new size of the renderer.</param>
 /// <returns>HRESULT of the attempted resize.</returns>
-HRESULT _stdcall TerminalTriggerResizeWithDimension(_In_ void* terminal, _In_ COORD dimensionsInCharacters, _Out_ SIZE* dimensionsInPixels)
+HRESULT _stdcall TerminalTriggerResizeWithDimension(_In_ void* terminal, _In_ til::point dimensionsInCharacters, _Out_ SIZE* dimensionsInPixels)
 {
     RETURN_HR_IF_NULL(E_INVALIDARG, dimensionsInPixels);
 
     const auto publicTerminal = static_cast<const HwndTerminal*>(terminal);
 
-    const auto viewInCharacters = Viewport::FromDimensions({ 0, 0 }, { (dimensionsInCharacters.X), (dimensionsInCharacters.Y) });
+    const auto viewInCharacters = Viewport::FromDimensions({ 0, 0 }, { (dimensionsInCharacters.x), (dimensionsInCharacters.y) });
     const auto viewInPixels = publicTerminal->_renderEngine->GetViewportInPixels(viewInCharacters);
 
     dimensionsInPixels->cx = viewInPixels.Width();
     dimensionsInPixels->cy = viewInPixels.Height();
 
-    COORD unused{ 0, 0 };
+    til::point unused{ 0, 0 };
 
     return TerminalTriggerResize(terminal, viewInPixels.Width(), viewInPixels.Height(), &unused);
 }
@@ -485,15 +485,15 @@ HRESULT _stdcall TerminalTriggerResizeWithDimension(_In_ void* terminal, _In_ CO
 /// <param name="height">Height of the terminal area to calculate.</param>
 /// <param name="dimensions">Out parameter containing the columns and rows that fit the new size.</param>
 /// <returns>HRESULT of the calculation.</returns>
-HRESULT _stdcall TerminalCalculateResize(_In_ void* terminal, _In_ short width, _In_ short height, _Out_ COORD* dimensions)
+HRESULT _stdcall TerminalCalculateResize(_In_ void* terminal, _In_ short width, _In_ short height, _Out_ til::point* dimensions)
 {
     const auto publicTerminal = static_cast<const HwndTerminal*>(terminal);
 
     const auto viewInPixels = Viewport::FromDimensions({ 0, 0 }, { width, height });
     const auto viewInCharacters = publicTerminal->_renderEngine->GetViewportInCharacters(viewInPixels);
 
-    dimensions->X = viewInCharacters.Width();
-    dimensions->Y = viewInCharacters.Height();
+    dimensions->x = viewInCharacters.Width();
+    dimensions->y = viewInCharacters.Height();
 
     return S_OK;
 }
@@ -549,11 +549,11 @@ try
 
     if (multiClickMapper == 3)
     {
-        _terminal->MultiClickSelection((cursorPosition / fontSize).to_win32_coord(), ::Terminal::SelectionExpansion::Line);
+        _terminal->MultiClickSelection((cursorPosition / fontSize), ::Terminal::SelectionExpansion::Line);
     }
     else if (multiClickMapper == 2)
     {
-        _terminal->MultiClickSelection((cursorPosition / fontSize).to_win32_coord(), ::Terminal::SelectionExpansion::Word);
+        _terminal->MultiClickSelection((cursorPosition / fontSize), ::Terminal::SelectionExpansion::Word);
     }
     else
     {
@@ -594,13 +594,13 @@ try
 
         if (distanceSquared >= maxDistanceSquared)
         {
-            _terminal->SetSelectionAnchor((touchdownPoint / fontSize).to_win32_coord());
+            _terminal->SetSelectionAnchor((touchdownPoint / fontSize));
             // stop tracking the touchdown point
             _singleClickTouchdownPos = std::nullopt;
         }
     }
 
-    this->_terminal->SetSelectionEnd((cursorPosition / fontSize).to_win32_coord());
+    this->_terminal->SetSelectionEnd((cursorPosition / fontSize));
     this->_renderer->TriggerSelection();
 
     return S_OK;
@@ -713,7 +713,7 @@ try
         WI_IsFlagSet(GetKeyState(VK_RBUTTON), KeyPressed)
     };
 
-    return _terminal->SendMouseEvent((cursorPosition / fontSize).to_win32_coord(), uMsg, getControlKeyState(), wheelDelta, state);
+    return _terminal->SendMouseEvent((cursorPosition / fontSize), uMsg, getControlKeyState(), wheelDelta, state);
 }
 catch (...)
 {
@@ -809,7 +809,7 @@ void _stdcall TerminalSetTheme(void* terminal, TerminalTheme theme, LPCWSTR font
     RECT windowRect;
     GetWindowRect(publicTerminal->_hwnd.get(), &windowRect);
 
-    COORD dimensions = {};
+    COORD dimensions{};
     const SIZE windowSize{ windowRect.right - windowRect.left, windowRect.bottom - windowRect.top };
     publicTerminal->Refresh(windowSize, &dimensions);
 }
@@ -888,7 +888,7 @@ try
         if (fAlsoCopyFormatting)
         {
             const auto& fontData = _actualFont;
-            int const iFontHeightPoints = fontData.GetUnscaledSize().Y; // this renderer uses points already
+            int const iFontHeightPoints = fontData.GetUnscaledSize().height; // this renderer uses points already
             const COLORREF bgColor = _terminal->GetAttributeColors(_terminal->GetDefaultBrushColors()).second;
 
             std::string HTMLToPlaceOnClip = TextBuffer::GenHTML(rows, iFontHeightPoints, fontData.GetFaceName(), bgColor);
@@ -983,7 +983,7 @@ void HwndTerminal::_StringPaste(const wchar_t* const pData) noexcept
     CATCH_LOG();
 }
 
-COORD HwndTerminal::GetFontSize() const noexcept
+til::point HwndTerminal::GetFontSize() const noexcept
 {
     return _actualFont.GetSize();
 }
@@ -1005,9 +1005,9 @@ double HwndTerminal::GetScaleFactor() const noexcept
     return static_cast<double>(_currentDpi) / static_cast<double>(USER_DEFAULT_SCREEN_DPI);
 }
 
-void HwndTerminal::ChangeViewport(const SMALL_RECT NewWindow)
+void HwndTerminal::ChangeViewport(const til::inclusive_rect NewWindow)
 {
-    _terminal->UserScrollViewport(NewWindow.Top);
+    _terminal->UserScrollViewport(NewWindow.top);
 }
 
 HRESULT HwndTerminal::GetHostUiaProvider(IRawElementProviderSimple** provider) noexcept

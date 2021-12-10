@@ -141,12 +141,12 @@ namespace winrt::Microsoft::Terminal::Control::implementation
 #pragma endregion
 
 #pragma region IControlAccessibilityInfo
-    COORD InteractivityAutomationPeer::GetFontSize() const noexcept
+    til::size InteractivityAutomationPeer::GetFontSize() const noexcept
     {
-        return til::size{ til::math::rounding, _interactivity->Core().FontSize() }.to_win32_coord();
+        return til::size{ til::math::rounding, _interactivity->Core().FontSize() };
     }
 
-    RECT InteractivityAutomationPeer::GetBounds() const noexcept
+    til::rect InteractivityAutomationPeer::GetBounds() const noexcept
     {
         return _controlBounds.to_win32_rect();
     }
@@ -159,7 +159,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         return S_OK;
     }
 
-    RECT InteractivityAutomationPeer::GetPadding() const noexcept
+    til::rect InteractivityAutomationPeer::GetPadding() const noexcept
     {
         return _controlPadding.to_win32_rect();
     }
@@ -169,9 +169,9 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         return DisplayInformation::GetForCurrentView().RawPixelsPerViewPixel();
     }
 
-    void InteractivityAutomationPeer::ChangeViewport(const SMALL_RECT NewWindow)
+    void InteractivityAutomationPeer::ChangeViewport(const til::inclusive_rect NewWindow)
     {
-        _interactivity->UpdateScrollbar(NewWindow.Top);
+        _interactivity->UpdateScrollbar(NewWindow.top);
     }
 #pragma endregion
 

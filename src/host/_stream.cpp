@@ -40,43 +40,43 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 // - fKeepCursorVisible - TRUE if changing window origin desirable when hit right edge
 // Return Value:
 [[nodiscard]] NTSTATUS AdjustCursorPosition(SCREEN_INFORMATION& screenInfo,
-                                            _In_ COORD coordCursor,
+                                            _In_ til::point coordCursor,
                                             const BOOL fKeepCursorVisible,
-                                            _Inout_opt_ PSHORT psScrollY)
+                                            _Inout_opt_ til::CoordType* psScrollY)
 {
     const bool inVtMode = WI_IsFlagSet(screenInfo.OutputMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    const COORD bufferSize = screenInfo.GetBufferSize().Dimensions();
-    if (coordCursor.X < 0)
+    const auto bufferSize = screenInfo.GetBufferSize().Dimensions();
+    if (coordCursor.x < 0)
     {
-        if (coordCursor.Y > 0)
+        if (coordCursor.y > 0)
         {
-            coordCursor.X = (SHORT)(bufferSize.X + coordCursor.X);
-            coordCursor.Y = (SHORT)(coordCursor.Y - 1);
+            coordCursor.x = bufferSize.width + coordCursor.x;
+            coordCursor.y = coordCursor.y - 1;
         }
         else
         {
-            coordCursor.X = 0;
+            coordCursor.x = 0;
         }
     }
-    else if (coordCursor.X >= bufferSize.X)
+    else if (coordCursor.x >= bufferSize.width)
     {
         // at end of line. if wrap mode, wrap cursor.  otherwise leave it where it is.
         if (screenInfo.OutputMode & ENABLE_WRAP_AT_EOL_OUTPUT)
         {
-            coordCursor.Y += coordCursor.X / bufferSize.X;
-            coordCursor.X = coordCursor.X % bufferSize.X;
+            coordCursor.y += coordCursor.x / bufferSize.width;
+            coordCursor.x = coordCursor.x % bufferSize.width;
         }
         else
         {
             if (inVtMode)
             {
                 // In VT mode, the cursor must be left in the last column.
-                coordCursor.X = bufferSize.X - 1;
+                coordCursor.x = bufferSize.width - 1;
             }
             else
             {
                 // For legacy apps, it is left where it was at the start of the write.
-                coordCursor.X = screenInfo.GetTextBuffer().GetCursor().GetPosition().X;
+                coordCursor.x = screenInfo.GetTextBuffer().GetCursor().GetPosition().x;
             }
         }
     }
@@ -88,17 +88,17 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
     const auto relativeMargins = screenInfo.GetRelativeScrollMargins();
     auto viewport = screenInfo.GetViewport();
-    SMALL_RECT srMargins = screenInfo.GetAbsoluteScrollMargins().ToInclusive();
-    const bool fMarginsSet = srMargins.Bottom > srMargins.Top;
-    COORD currentCursor = screenInfo.GetTextBuffer().GetCursor().GetPosition();
-    const int iCurrentCursorY = currentCursor.Y;
+    auto srMargins = screenInfo.GetAbsoluteScrollMargins().ToInclusive();
+    const bool fMarginsSet = srMargins.bottom > srMargins.top;
+    auto currentCursor = screenInfo.GetTextBuffer().GetCursor().GetPosition();
+    const int iCurrentCursorY = currentCursor.y;
 
-    const bool fCursorInMargins = iCurrentCursorY <= srMargins.Bottom && iCurrentCursorY >= srMargins.Top;
-    const bool cursorAboveViewport = coordCursor.Y < 0 && inVtMode;
-    const bool fScrollDown = fMarginsSet && fCursorInMargins && (coordCursor.Y > srMargins.Bottom);
-    bool fScrollUp = fMarginsSet && fCursorInMargins && (coordCursor.Y < srMargins.Top);
+    const bool fCursorInMargins = iCurrentCursorY <= srMargins.bottom && iCurrentCursorY >= srMargins.top;
+    const bool cursorAboveViewport = coordCursor.y < 0 && inVtMode;
+    const bool fScrollDown = fMarginsSet && fCursorInMargins && coordCursor.y > srMargins.bottom;
+    bool fScrollUp = fMarginsSet && fCursorInMargins && coordCursor.y < srMargins.top;
 
-    const bool fScrollUpWithoutMargins = (!fMarginsSet) && cursorAboveViewport;
+    const bool fScrollUpWithoutMargins = !fMarginsSet && cursorAboveViewport;
     // if we're in VT mode, AND MARGINS AREN'T SET and a Reverse Line Feed took the cursor up past the top of the viewport,
     //   VT style scroll the contents of the screen.
     // This can happen in applications like `less`, that don't set margins, because they're going to
@@ -106,8 +106,8 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
     if (fScrollUpWithoutMargins)
     {
         fScrollUp = true;
-        srMargins.Top = 0;
-        srMargins.Bottom = screenInfo.GetViewport().BottomInclusive();
+        srMargins.top = 0;
+        srMargins.bottom = screenInfo.GetViewport().BottomInclusive();
     }
 
     const bool scrollDownAtTop = fScrollDown && relativeMargins.Top() == 0;
@@ -119,22 +119,22 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
         // To do this, we're going to scroll everything starting at the bottom
         //  margin down, then move the viewport down.
 
-        const SHORT delta = coordCursor.Y - srMargins.Bottom;
-        SMALL_RECT scrollRect{ 0 };
-        scrollRect.Left = 0;
-        scrollRect.Top = srMargins.Bottom + 1; // One below margins
-        scrollRect.Bottom = bufferSize.Y - 1; // -1, otherwise this would be an exclusive rect.
-        scrollRect.Right = bufferSize.X - 1; // -1, otherwise this would be an exclusive rect.
+        const auto delta = coordCursor.y - srMargins.bottom;
+        til::inclusive_rect scrollRect{ 0 };
+        scrollRect.left = 0;
+        scrollRect.top = srMargins.bottom + 1; // One below margins
+        scrollRect.bottom = bufferSize.height - 1; // -1, otherwise this would be an exclusive rect.
+        scrollRect.right = bufferSize.width - 1; // -1, otherwise this would be an exclusive rect.
 
         // This is the Y position we're moving the contents below the bottom margin to.
-        SHORT moveToYPosition = scrollRect.Top + delta;
+        auto moveToYPosition = scrollRect.top + delta;
 
         // This is where the viewport will need to be to give the effect of
         //      scrolling the contents in the margins.
-        SHORT newViewTop = viewport.Top() + delta;
+        auto newViewTop = viewport.Top() + delta;
 
         // This is how many new lines need to be added to the buffer to support this operation.
-        const SHORT newRows = (viewport.BottomExclusive() + delta) - bufferSize.Y;
+        const auto newRows = viewport.BottomExclusive() + delta - bufferSize.height;
 
         // If we're near the bottom of the buffer, we might need to insert some
         //      new rows at the bottom.
@@ -145,11 +145,11 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             screenInfo.GetTextBuffer().IncrementCircularBuffer();
             moveToYPosition--;
             newViewTop--;
-            scrollRect.Top--;
+            scrollRect.top--;
         }
 
-        const COORD newPostMarginsOrigin = { 0, moveToYPosition };
-        const COORD newViewOrigin = { 0, newViewTop };
+        const til::point newPostMarginsOrigin{ 0, moveToYPosition };
+        const til::point newViewOrigin{ 0, newViewTop };
 
         try
         {
@@ -204,27 +204,27 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
         viewport = screenInfo.GetViewport();
         if (newRows > 0)
         {
-            currentCursor.Y -= newRows;
-            coordCursor.Y -= newRows;
+            currentCursor.y -= newRows;
+            coordCursor.y -= newRows;
         }
         srMargins = screenInfo.GetAbsoluteScrollMargins().ToInclusive();
     }
 
     // If we did the above scrollDownAtTop case, then we've already scrolled
     //      the margins content, and we can skip this.
-    if (fScrollUp || (fScrollDown && !scrollDownAtTop))
+    if (fScrollUp || fScrollDown && !scrollDownAtTop)
     {
-        SHORT diff = coordCursor.Y - (fScrollUp ? srMargins.Top : srMargins.Bottom);
+        auto diff = coordCursor.y - (fScrollUp ? srMargins.top : srMargins.bottom);
 
-        SMALL_RECT scrollRect = { 0 };
-        scrollRect.Top = srMargins.Top;
-        scrollRect.Bottom = srMargins.Bottom;
-        scrollRect.Left = 0; // NOTE: Left/Right Scroll margins don't do anything currently.
-        scrollRect.Right = bufferSize.X - 1; // -1, otherwise this would be an exclusive rect.
+        til::inclusive_rect scrollRect;
+        scrollRect.top = srMargins.top;
+        scrollRect.bottom = srMargins.bottom;
+        scrollRect.left = 0; // NOTE: Left/Right Scroll margins don't do anything currently.
+        scrollRect.right = bufferSize.width - 1; // -1, otherwise this would be an exclusive rect.
 
-        COORD dest;
-        dest.X = scrollRect.Left;
-        dest.Y = scrollRect.Top - diff;
+        til::point dest;
+        dest.x = scrollRect.left;
+        dest.y = scrollRect.top - diff;
 
         try
         {
@@ -232,24 +232,24 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
         }
         CATCH_LOG();
 
-        coordCursor.Y -= diff;
+        coordCursor.y -= diff;
     }
 
     // If the margins are set, then it shouldn't be possible for the cursor to
     //   move below the bottom of the viewport. Either it should be constrained
     //   inside the margins by one of the scrollDown cases handled above, or
     //   we'll need to clamp it inside the viewport here.
-    if (fMarginsSet && coordCursor.Y > viewport.BottomInclusive())
+    if (fMarginsSet && coordCursor.y > viewport.BottomInclusive())
     {
-        coordCursor.Y = viewport.BottomInclusive();
+        coordCursor.y = viewport.BottomInclusive();
     }
 
     NTSTATUS Status = STATUS_SUCCESS;
 
-    if (coordCursor.Y >= bufferSize.Y)
+    if (coordCursor.y >= bufferSize.height)
     {
         // At the end of the buffer. Scroll contents of screen buffer so new position is visible.
-        FAIL_FAST_IF(!(coordCursor.Y == bufferSize.Y));
+        FAIL_FAST_IF(!(coordCursor.y == bufferSize.height));
         if (!StreamScrollRegion(screenInfo))
         {
             Status = STATUS_NO_MEMORY;
@@ -257,21 +257,21 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
         if (nullptr != psScrollY)
         {
-            *psScrollY += (SHORT)(bufferSize.Y - coordCursor.Y - 1);
+            *psScrollY += bufferSize.height - coordCursor.y - 1;
         }
-        coordCursor.Y += (SHORT)(bufferSize.Y - coordCursor.Y - 1);
+        coordCursor.y += bufferSize.height - coordCursor.y - 1;
     }
 
-    const bool cursorMovedPastViewport = coordCursor.Y > screenInfo.GetViewport().BottomInclusive();
-    const bool cursorMovedPastVirtualViewport = coordCursor.Y > screenInfo.GetVirtualViewport().BottomInclusive();
+    const bool cursorMovedPastViewport = coordCursor.y > screenInfo.GetViewport().BottomInclusive();
+    const bool cursorMovedPastVirtualViewport = coordCursor.y > screenInfo.GetVirtualViewport().BottomInclusive();
     if (NT_SUCCESS(Status))
     {
         // if at right or bottom edge of window, scroll right or down one char.
         if (cursorMovedPastViewport)
         {
-            COORD WindowOrigin;
-            WindowOrigin.X = 0;
-            WindowOrigin.Y = coordCursor.Y - screenInfo.GetViewport().BottomInclusive();
+            til::point WindowOrigin;
+            WindowOrigin.x = 0;
+            WindowOrigin.y = coordCursor.y - screenInfo.GetViewport().BottomInclusive();
             Status = screenInfo.SetViewportOrigin(false, WindowOrigin, true);
         }
     }
@@ -327,16 +327,16 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                                         _In_reads_bytes_(*pcb) const wchar_t* pwchRealUnicode,
                                         _Inout_ size_t* const pcb,
                                         _Out_opt_ size_t* const pcSpaces,
-                                        const SHORT sOriginalXPosition,
+                                        const til::CoordType sOriginalXPosition,
                                         const DWORD dwFlags,
-                                        _Inout_opt_ PSHORT const psScrollY)
+                                        _Inout_opt_ til::CoordType* const psScrollY)
 {
     const CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
     TextBuffer& textBuffer = screenInfo.GetTextBuffer();
     Cursor& cursor = textBuffer.GetCursor();
-    COORD CursorPosition = cursor.GetPosition();
+    auto CursorPosition = cursor.GetPosition();
     NTSTATUS Status = STATUS_SUCCESS;
-    SHORT XPosition;
+    til::CoordType XPosition;
     size_t TempNumSpaces = 0;
     const bool fUnprocessed = WI_IsFlagClear(screenInfo.OutputMode, ENABLE_PROCESSED_OUTPUT);
     const bool fWrapAtEOL = WI_IsFlagSet(screenInfo.OutputMode, ENABLE_WRAP_AT_EOL_OUTPUT);
@@ -350,11 +350,11 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
     const wchar_t* lpString = pwchRealUnicode;
 
-    COORD coordScreenBufferSize = screenInfo.GetBufferSize().Dimensions();
+    auto coordScreenBufferSize = screenInfo.GetBufferSize().Dimensions();
     // In VT mode, the width at which we wrap is determined by the line rendition attribute.
     if (WI_IsFlagSet(screenInfo.OutputMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING))
     {
-        coordScreenBufferSize.X = textBuffer.GetLineWidth(CursorPosition.Y);
+        coordScreenBufferSize.width = textBuffer.GetLineWidth(CursorPosition.y);
     }
 
     static constexpr unsigned int LOCAL_BUFFER_SIZE = 1024;
@@ -365,13 +365,13 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
         // correct for delayed EOL
         if (cursor.IsDelayedEOLWrap() && fWrapAtEOL)
         {
-            const COORD coordDelayedAt = cursor.GetDelayedAtPosition();
+            const auto coordDelayedAt = cursor.GetDelayedAtPosition();
             cursor.ResetDelayEOLWrap();
             // Only act on a delayed EOL if we didn't move the cursor to a different position from where the EOL was marked.
-            if (coordDelayedAt.X == CursorPosition.X && coordDelayedAt.Y == CursorPosition.Y)
+            if (coordDelayedAt.x == CursorPosition.x && coordDelayedAt.y == CursorPosition.y)
             {
-                CursorPosition.X = 0;
-                CursorPosition.Y++;
+                CursorPosition.x = 0;
+                CursorPosition.y++;
 
                 Status = AdjustCursorPosition(screenInfo, CursorPosition, WI_IsFlagSet(dwFlags, WC_KEEP_CURSOR_VISIBLE), psScrollY);
 
@@ -379,16 +379,16 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 // In VT mode, we need to recalculate the width when moving to a new line.
                 if (WI_IsFlagSet(screenInfo.OutputMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING))
                 {
-                    coordScreenBufferSize.X = textBuffer.GetLineWidth(CursorPosition.Y);
+                    coordScreenBufferSize.width = textBuffer.GetLineWidth(CursorPosition.y);
                 }
             }
         }
 
         // As an optimization, collect characters in buffer and print out all at once.
-        XPosition = cursor.GetPosition().X;
-        size_t i = 0;
+        XPosition = cursor.GetPosition().x;
+        til::CoordType i = 0;
         wchar_t* LocalBufPtr = LocalBuffer;
-        while (*pcb < BufferSize && i < LOCAL_BUFFER_SIZE && XPosition < coordScreenBufferSize.X)
+        while (*pcb < BufferSize && i < LOCAL_BUFFER_SIZE && XPosition < coordScreenBufferSize.width)
         {
 #pragma prefast(suppress : 26019, "Buffer is taken in multiples of 2. Validation is ok.")
             const wchar_t Char = *lpString;
@@ -401,7 +401,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 // WCL-NOTE: This operates on a single code unit instead of a whole codepoint. It will mis-measure surrogate pairs.
                 if (IsGlyphFullWidth(Char))
                 {
-                    if (i < (LOCAL_BUFFER_SIZE - 1) && XPosition < (coordScreenBufferSize.X - 1))
+                    if (i < LOCAL_BUFFER_SIZE - 1 && XPosition < coordScreenBufferSize.width - 1)
                     {
                         *LocalBufPtr++ = Char;
 
@@ -453,8 +453,8 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 case UNICODE_TAB:
                 {
                     const ULONG TabSize = NUMBER_OF_SPACES_IN_TAB(XPosition);
-                    XPosition = (SHORT)(XPosition + TabSize);
-                    if (XPosition >= coordScreenBufferSize.X)
+                    XPosition = XPosition + TabSize;
+                    if (XPosition >= coordScreenBufferSize.width)
                     {
                         goto EndWhile;
                     }
@@ -474,10 +474,10 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 default:
 
                     // if char is ctrl char, write ^char.
-                    if ((dwFlags & WC_PRINTABLE_CONTROL_CHARS) && (IS_CONTROL_CHAR(RealUnicodeChar)))
+                    if (dwFlags & WC_PRINTABLE_CONTROL_CHARS && IS_CONTROL_CHAR(RealUnicodeChar))
                     {
                     CtrlChar:
-                        if (i < (LOCAL_BUFFER_SIZE - 1))
+                        if (i < LOCAL_BUFFER_SIZE - 1)
                         {
                             // WCL-NOTE: We do not properly measure that there is space for two characters
                             // WCL-NOTE: left on the screen.
@@ -547,10 +547,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
             // Make sure we don't write past the end of the buffer.
             // WCL-NOTE: This check uses a code unit count instead of a column count. That is incorrect.
-            if (i > gsl::narrow_cast<size_t>(coordScreenBufferSize.X) - CursorPosition.X)
-            {
-                i = gsl::narrow_cast<size_t>(coordScreenBufferSize.X) - CursorPosition.X;
-            }
+            i = std::min(i, coordScreenBufferSize.width - CursorPosition.x);
 
             // line was wrapped if we're writing up to the end of the current row
             OutputCellIterator it(std::wstring_view(LocalBuffer, i), Attributes);
@@ -559,7 +556,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             // Notify accessibility
             if (screenInfo.HasAccessibilityEventing())
             {
-                screenInfo.NotifyAccessibilityEventing(CursorPosition.X, CursorPosition.Y, CursorPosition.X + gsl::narrow<SHORT>(i - 1), CursorPosition.Y);
+                screenInfo.NotifyAccessibilityEventing(CursorPosition.x, CursorPosition.y, CursorPosition.x + i - 1, CursorPosition.y);
             }
 
             // The number of "spaces" or "cells" we have consumed needs to be reported and stored for later
@@ -568,13 +565,13 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             // WCL-NOTE: We are using the "estimated" X position delta instead of the actual delta from
             // WCL-NOTE: the iterator. It is not clear why. If they differ, the cursor ends up in the
             // WCL-NOTE: wrong place (typically inside another character).
-            CursorPosition.X = XPosition;
+            CursorPosition.x = XPosition;
 
             // enforce a delayed newline if we're about to pass the end and the WC_DELAY_EOL_WRAP flag is set.
-            if (WI_IsFlagSet(dwFlags, WC_DELAY_EOL_WRAP) && CursorPosition.X >= coordScreenBufferSize.X && fWrapAtEOL)
+            if (WI_IsFlagSet(dwFlags, WC_DELAY_EOL_WRAP) && CursorPosition.x >= coordScreenBufferSize.width && fWrapAtEOL)
             {
                 // Our cursor position as of this time is going to remain on the last position in this column.
-                CursorPosition.X = coordScreenBufferSize.X - 1;
+                CursorPosition.x = coordScreenBufferSize.width - 1;
 
                 // Update in the structures that we're still pointing to the last character in the row
                 cursor.SetPosition(CursorPosition);
@@ -625,7 +622,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             TempNumSpaces -= 1;
             if (pwchBuffer == pwchBufferBackupLimit)
             {
-                CursorPosition.X -= 1;
+                CursorPosition.x -= 1;
             }
             else
             {
@@ -677,24 +674,24 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
                 if (LastChar == UNICODE_TAB)
                 {
-                    CursorPosition.X -= (SHORT)(RetrieveNumberOfSpaces(sOriginalXPosition,
-                                                                       pwchBufferBackupLimit,
-                                                                       (ULONG)(pwchBuffer - pwchBufferBackupLimit - 1)));
-                    if (CursorPosition.X < 0)
+                    CursorPosition.x -= RetrieveNumberOfSpaces(sOriginalXPosition,
+                                                               pwchBufferBackupLimit,
+                                                               pwchBuffer - pwchBufferBackupLimit - 1);
+                    if (CursorPosition.x < 0)
                     {
-                        CursorPosition.X = (coordScreenBufferSize.X - 1) / TAB_SIZE;
-                        CursorPosition.X *= TAB_SIZE;
-                        CursorPosition.X += 1;
-                        CursorPosition.Y -= 1;
+                        CursorPosition.x = (coordScreenBufferSize.width - 1) / TAB_SIZE;
+                        CursorPosition.x *= TAB_SIZE;
+                        CursorPosition.x += 1;
+                        CursorPosition.y -= 1;
 
                         // since you just backspaced yourself back up into the previous row, unset the wrap
                         // flag on the prev row if it was set
-                        textBuffer.GetRowByOffset(CursorPosition.Y).SetWrapForced(false);
+                        textBuffer.GetRowByOffset(CursorPosition.y).SetWrapForced(false);
                     }
                 }
                 else if (IS_CONTROL_CHAR(LastChar))
                 {
-                    CursorPosition.X -= 1;
+                    CursorPosition.x -= 1;
                     TempNumSpaces -= 1;
 
                     // overwrite second character of ^x sequence.
@@ -708,11 +705,11 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                         CATCH_LOG();
                     }
 
-                    CursorPosition.X -= 1;
+                    CursorPosition.x -= 1;
                 }
                 else if (IsGlyphFullWidth(LastChar))
                 {
-                    CursorPosition.X -= 1;
+                    CursorPosition.x -= 1;
                     TempNumSpaces -= 1;
 
                     Status = AdjustCursorPosition(screenInfo, CursorPosition, dwFlags & WC_KEEP_CURSOR_VISIBLE, psScrollY);
@@ -725,17 +722,17 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                         }
                         CATCH_LOG();
                     }
-                    CursorPosition.X -= 1;
+                    CursorPosition.x -= 1;
                 }
                 else
                 {
-                    CursorPosition.X--;
+                    CursorPosition.x--;
                 }
             }
-            if ((dwFlags & WC_LIMIT_BACKSPACE) && (CursorPosition.X < 0))
+            if (dwFlags & WC_LIMIT_BACKSPACE && CursorPosition.x < 0)
             {
-                CursorPosition.X = 0;
-                OutputDebugStringA(("CONSRV: Ignoring backspace to previous line\n"));
+                CursorPosition.x = 0;
+                OutputDebugStringA("CONSRV: Ignoring backspace to previous line\n");
             }
             Status = AdjustCursorPosition(screenInfo, CursorPosition, (dwFlags & WC_KEEP_CURSOR_VISIBLE) != 0, psScrollY);
             if (dwFlags & WC_DESTRUCTIVE_BACKSPACE)
@@ -746,21 +743,21 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 }
                 CATCH_LOG();
             }
-            if (cursor.GetPosition().X == 0 && fWrapAtEOL && pwchBuffer > pwchBufferBackupLimit)
+            if (cursor.GetPosition().x == 0 && fWrapAtEOL && pwchBuffer > pwchBufferBackupLimit)
             {
                 if (CheckBisectProcessW(screenInfo,
                                         pwchBufferBackupLimit,
                                         pwchBuffer + 1 - pwchBufferBackupLimit,
-                                        gsl::narrow_cast<size_t>(coordScreenBufferSize.X) - sOriginalXPosition,
+                                        gsl::narrow_cast<size_t>(coordScreenBufferSize.width - sOriginalXPosition),
                                         sOriginalXPosition,
                                         dwFlags & WC_PRINTABLE_CONTROL_CHARS))
                 {
-                    CursorPosition.X = coordScreenBufferSize.X - 1;
-                    CursorPosition.Y = (SHORT)(cursor.GetPosition().Y - 1);
+                    CursorPosition.x = coordScreenBufferSize.width - 1;
+                    CursorPosition.y = cursor.GetPosition().y - 1;
 
                     // since you just backspaced yourself back up into the previous row, unset the wrap flag
                     // on the prev row if it was set
-                    textBuffer.GetRowByOffset(CursorPosition.Y).SetWrapForced(false);
+                    textBuffer.GetRowByOffset(CursorPosition.y).SetWrapForced(false);
 
                     Status = AdjustCursorPosition(screenInfo, CursorPosition, dwFlags & WC_KEEP_CURSOR_VISIBLE, psScrollY);
                 }
@@ -769,8 +766,8 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
         }
         case UNICODE_TAB:
         {
-            const size_t TabSize = gsl::narrow_cast<size_t>(NUMBER_OF_SPACES_IN_TAB(cursor.GetPosition().X));
-            CursorPosition.X = (SHORT)(cursor.GetPosition().X + TabSize);
+            const auto TabSize = NUMBER_OF_SPACES_IN_TAB(cursor.GetPosition().x);
+            CursorPosition.x = cursor.GetPosition().x + TabSize;
 
             // move cursor forward to next tab stop.  fill space with blanks.
             // we get here when the tab extends beyond the right edge of the
@@ -780,19 +777,19 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
 
             TempNumSpaces += TabSize;
             size_t NumChars = 0;
-            if (CursorPosition.X >= coordScreenBufferSize.X)
+            if (CursorPosition.x >= coordScreenBufferSize.width)
             {
-                NumChars = gsl::narrow<size_t>(coordScreenBufferSize.X - cursor.GetPosition().X);
-                CursorPosition.X = 0;
-                CursorPosition.Y = cursor.GetPosition().Y + 1;
+                NumChars = gsl::narrow<size_t>(coordScreenBufferSize.width - cursor.GetPosition().x);
+                CursorPosition.x = 0;
+                CursorPosition.y = cursor.GetPosition().y + 1;
 
                 // since you just tabbed yourself past the end of the row, set the wrap
-                textBuffer.GetRowByOffset(cursor.GetPosition().Y).SetWrapForced(true);
+                textBuffer.GetRowByOffset(cursor.GetPosition().y).SetWrapForced(true);
             }
             else
             {
-                NumChars = gsl::narrow<size_t>(CursorPosition.X - cursor.GetPosition().X);
-                CursorPosition.Y = cursor.GetPosition().Y;
+                NumChars = gsl::narrow<size_t>(CursorPosition.x - cursor.GetPosition().x);
+                CursorPosition.y = cursor.GetPosition().y;
             }
 
             try
@@ -812,8 +809,8 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             // We don't need to worry about handling cr or lf for
             // backspace because input is sent to the user on cr or lf.
             pwchBuffer++;
-            CursorPosition.X = 0;
-            CursorPosition.Y = cursor.GetPosition().Y;
+            CursorPosition.x = 0;
+            CursorPosition.y = cursor.GetPosition().y;
             Status = AdjustCursorPosition(screenInfo, CursorPosition, (dwFlags & WC_KEEP_CURSOR_VISIBLE) != 0, psScrollY);
             break;
         }
@@ -827,14 +824,14 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                 // Traditionally, we reset the X position to 0 with a newline automatically.
                 // Some things might not want this automatic "ONLCR line discipline" (for example, things that are expecting a *NIX behavior.)
                 // They will turn it off with an output mode flag.
-                CursorPosition.X = 0;
+                CursorPosition.x = 0;
             }
 
-            CursorPosition.Y = (SHORT)(cursor.GetPosition().Y + 1);
+            CursorPosition.y = cursor.GetPosition().y + 1;
 
             {
                 // since we explicitly just moved down a row, clear the wrap status on the row we just came from
-                textBuffer.GetRowByOffset(cursor.GetPosition().Y).SetWrapForced(false);
+                textBuffer.GetRowByOffset(cursor.GetPosition().y).SetWrapForced(false);
             }
 
             Status = AdjustCursorPosition(screenInfo, CursorPosition, (dwFlags & WC_KEEP_CURSOR_VISIBLE) != 0, psScrollY);
@@ -845,24 +842,24 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
             const wchar_t Char = *lpString;
             if (Char >= UNICODE_SPACE &&
                 IsGlyphFullWidth(Char) &&
-                XPosition >= (coordScreenBufferSize.X - 1) &&
+                XPosition >= coordScreenBufferSize.width - 1 &&
                 fWrapAtEOL)
             {
-                const COORD TargetPoint = cursor.GetPosition();
-                ROW& Row = textBuffer.GetRowByOffset(TargetPoint.Y);
+                const auto TargetPoint = cursor.GetPosition();
+                ROW& Row = textBuffer.GetRowByOffset(TargetPoint.y);
                 const CharRow& charRow = Row.GetCharRow();
 
                 try
                 {
                     // If we're on top of a trailing cell, clear it and the previous cell.
-                    if (charRow.DbcsAttrAt(TargetPoint.X).IsTrailing())
+                    if (charRow.DbcsAttrAt(TargetPoint.x).IsTrailing())
                     {
                         // Space to clear for 2 cells.
                         OutputCellIterator it(UNICODE_SPACE, 2);
 
                         // Back target point up one.
                         auto writeTarget = TargetPoint;
-                        writeTarget.X--;
+                        writeTarget.x--;
 
                         // Write 2 clear cells.
                         screenInfo.Write(it, writeTarget);
@@ -873,8 +870,8 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                     return NTSTATUS_FROM_HRESULT(wil::ResultFromCaughtException());
                 }
 
-                CursorPosition.X = 0;
-                CursorPosition.Y = (SHORT)(TargetPoint.Y + 1);
+                CursorPosition.x = 0;
+                CursorPosition.y = TargetPoint.y + 1;
 
                 // since you just moved yourself down onto the next row with 1 character, that sounds like a
                 // forced wrap so set the flag
@@ -933,9 +930,9 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                                   _In_reads_bytes_(*pcb) const wchar_t* pwchRealUnicode,
                                   _Inout_ size_t* const pcb,
                                   _Out_opt_ size_t* const pcSpaces,
-                                  const SHORT sOriginalXPosition,
+                                  const til::CoordType sOriginalXPosition,
                                   const DWORD dwFlags,
-                                  _Inout_opt_ PSHORT const psScrollY)
+                                  _Inout_opt_ til::CoordType* const psScrollY)
 {
     if (!WI_IsFlagSet(screenInfo.OutputMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING) ||
         !WI_IsFlagSet(screenInfo.OutputMode, ENABLE_PROCESSED_OUTPUT))
@@ -1046,7 +1043,7 @@ using Microsoft::Console::VirtualTerminal::StateMachine;
                       pwchBuffer,
                       pcbBuffer,
                       nullptr,
-                      textBuffer.GetCursor().GetPosition().X,
+                      textBuffer.GetCursor().GetPosition().x,
                       WC_LIMIT_BACKSPACE,
                       nullptr);
 }

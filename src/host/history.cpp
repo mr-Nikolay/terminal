@@ -60,11 +60,11 @@ void CommandHistory::s_Free(const HANDLE processHandle)
     }
 }
 
-void CommandHistory::s_ResizeAll(const size_t commands)
+void CommandHistory::s_ResizeAll(const int commands)
 {
     CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
     FAIL_FAST_IF(commands > SHORT_MAX);
-    gci.SetHistoryBufferSize(gsl::narrow<UINT>(commands));
+    gci.SetHistoryBufferSize(gsl::narrow_cast<UINT>(commands));
 
     for (auto& historyList : s_historyLists)
     {
@@ -86,7 +86,7 @@ bool CommandHistory::IsAppNameMatch(const std::wstring_view other) const
 // - This routine is called when escape is entered or a command is added.
 void CommandHistory::_Reset()
 {
-    LastDisplayed = gsl::narrow<SHORT>(_commands.size()) - 1;
+    LastDisplayed = gsl::narrow_cast<int>(_commands.size() - 1);
     WI_SetFlag(Flags, CLE_RESET);
 }
 
@@ -114,7 +114,7 @@ void CommandHistory::_Reset()
 
             if (suppressDuplicates)
             {
-                SHORT index;
+                int index;
                 if (FindMatchingCommand(newCommand, LastDisplayed, index, CommandHistory::MatchOptions::ExactMatch))
                 {
                     reuse = Remove(index);
@@ -122,7 +122,7 @@ void CommandHistory::_Reset()
             }
 
             // find free record.  if all records are used, free the lru one.
-            if ((SHORT)_commands.size() == _maxCommands)
+            if ((int)_commands.size() == _maxCommands)
             {
                 _commands.erase(_commands.cbegin());
                 // move LastDisplayed back one in order to stay synced with the
@@ -157,18 +157,12 @@ void CommandHistory::_Reset()
     return S_OK;
 }
 
-std::wstring_view CommandHistory::GetNth(const SHORT index) const
+std::wstring_view CommandHistory::GetNth(const int index) const noexcept
 {
-    try
-    {
-        return _commands.at(index);
-    }
-    CATCH_LOG();
-
-    return {};
+    return index < _commands.size() ? til::at(_commands, index) : std::wstring_view{};
 }
 
-[[nodiscard]] HRESULT CommandHistory::RetrieveNth(const SHORT index,
+[[nodiscard]] HRESULT CommandHistory::RetrieveNth(const int index,
                                                   gsl::span<wchar_t> buffer,
                                                   size_t& commandSize)
 {
@@ -177,7 +171,7 @@ std::wstring_view CommandHistory::GetNth(const SHORT index) const
     try
     {
         const auto& cmd = _commands.at(index);
-        if (cmd.size() > (size_t)buffer.size())
+        if (cmd.size() > buffer.size())
         {
             commandSize = buffer.size(); // room for CRLF?
         }
@@ -255,50 +249,35 @@ void CommandHistory::Empty()
 
 bool CommandHistory::AtFirstCommand() const
 {
-    if (WI_IsFlagSet(Flags, CLE_RESET))
-    {
-        return FALSE;
-    }
-
-    SHORT i = (SHORT)(LastDisplayed - 1);
-    if (i == -1)
-    {
-        i = ((SHORT)_commands.size()) - 1i16;
-    }
-
-    return (i == ((SHORT)_commands.size()) - 1i16);
+    return WI_IsFlagClear(Flags, CLE_RESET) && LastDisplayed <= 0;
 }
 
 bool CommandHistory::AtLastCommand() const
 {
-    return LastDisplayed == ((SHORT)_commands.size()) - 1i16;
+    return LastDisplayed == _commands.size() - 1;
 }
 
 void CommandHistory::Realloc(const size_t commands)
 {
     // To protect ourselves from overflow and general arithmetic errors, a limit of SHORT_MAX is put on the size of the command history.
-    if (_maxCommands == (SHORT)commands || commands > SHORT_MAX)
+    if (commands > SHORT_MAX)
     {
         return;
     }
 
-    const auto oldCommands = _commands;
-    const auto newNumberOfCommands = gsl::narrow<SHORT>(std::min(_commands.size(), commands));
-
-    _commands.clear();
-    for (SHORT i = 0; i < newNumberOfCommands; i++)
+    if (commands < _commands.size())
     {
-        _commands.emplace_back(oldCommands[i]);
+        _commands.resize(commands);
     }
 
     WI_SetFlag(Flags, CLE_RESET);
-    LastDisplayed = gsl::narrow<SHORT>(_commands.size()) - 1;
-    _maxCommands = (SHORT)commands;
+    LastDisplayed = gsl::narrow_cast<int>(_commands.size() - 1);
+    _maxCommands = static_cast<int>(commands);
 }
 
 void CommandHistory::s_ReallocExeToFront(const std::wstring_view appName, const size_t commands)
 {
-    for (auto it = s_historyLists.begin(); it != s_historyLists.end(); it++)
+    for (auto it = s_historyLists.begin(); it != s_historyLists.end(); ++it)
     {
         if (WI_IsFlagSet(it->Flags, CLE_ALLOCATED) && it->IsAppNameMatch(appName))
         {
@@ -325,9 +304,9 @@ CommandHistory* CommandHistory::s_FindByExe(const std::wstring_view appName)
     return nullptr;
 }
 
-size_t CommandHistory::s_CountOfHistories()
+int CommandHistory::s_CountOfHistories()
 {
-    return s_historyLists.size();
+    return gsl::narrow_cast<int>(s_historyLists.size());
 }
 
 // Routine Description:
@@ -344,7 +323,7 @@ CommandHistory* CommandHistory::s_Allocate(const std::wstring_view appName, cons
     std::optional<CommandHistory> BestCandidate;
     bool SameApp = false;
 
-    for (auto it = s_historyLists.cbegin(); it != s_historyLists.cend(); it++)
+    for (auto it = s_historyLists.cbegin(); it != s_historyLists.cend(); ++it)
     {
         if (WI_IsFlagClear(it->Flags, CLE_ALLOCATED))
         {
@@ -368,14 +347,14 @@ CommandHistory* CommandHistory::s_Allocate(const std::wstring_view appName, cons
         History._appName = appName;
         History.Flags = CLE_ALLOCATED;
         History.LastDisplayed = -1;
-        History._maxCommands = gsl::narrow<SHORT>(gci.GetHistoryBufferSize());
+        History._maxCommands = gci.GetHistoryBufferSize();
         History._processHandle = processHandle;
         return &s_historyLists.emplace_front(History);
     }
     else if (!BestCandidate.has_value() && s_historyLists.size() > 0)
     {
         // If we have no candidate already and we need one, take the LRU (which is the back/last one) which isn't allocated.
-        for (auto it = s_historyLists.crbegin(); it != s_historyLists.crend(); it++)
+        for (auto it = s_historyLists.crbegin(); it != s_historyLists.crend(); ++it)
         {
             if (WI_IsFlagClear(it->Flags, CLE_ALLOCATED))
             {
@@ -405,30 +384,35 @@ CommandHistory* CommandHistory::s_Allocate(const std::wstring_view appName, cons
     return nullptr;
 }
 
-size_t CommandHistory::GetNumberOfCommands() const
+const std::vector<std::wstring>& CommandHistory::GetCommands() const noexcept
 {
-    return _commands.size();
+    return _commands;
 }
 
-void CommandHistory::_Prev(SHORT& ind) const
+int CommandHistory::GetNumberOfCommands() const noexcept
+{
+    return gsl::narrow_cast<int>(_commands.size());
+}
+
+void CommandHistory::_Prev(int& ind) const
 {
     if (ind <= 0)
     {
-        ind = gsl::narrow<SHORT>(_commands.size());
+        ind = gsl::narrow_cast<int>(_commands.size());
     }
     ind--;
 }
 
-void CommandHistory::_Next(SHORT& ind) const
+void CommandHistory::_Next(int& ind) const
 {
     ++ind;
-    if (ind >= (SHORT)_commands.size())
+    if (ind >= gsl::narrow_cast<int>(_commands.size()))
     {
         ind = 0;
     }
 }
 
-void CommandHistory::_Dec(SHORT& ind) const
+void CommandHistory::_Dec(int& ind) const
 {
     if (ind <= 0)
     {
@@ -437,7 +421,7 @@ void CommandHistory::_Dec(SHORT& ind) const
     ind--;
 }
 
-void CommandHistory::_Inc(SHORT& ind) const
+void CommandHistory::_Inc(int& ind) const
 {
     ++ind;
     if (ind >= _maxCommands)
@@ -446,19 +430,19 @@ void CommandHistory::_Inc(SHORT& ind) const
     }
 }
 
-std::wstring CommandHistory::Remove(const SHORT iDel)
+std::wstring CommandHistory::Remove(const int iDel)
 {
-    SHORT iFirst = 0;
-    SHORT iLast = gsl::narrow<SHORT>(_commands.size() - 1);
-    SHORT iDisp = LastDisplayed;
+    int iFirst = 0;
+    auto iLast = gsl::narrow_cast<int>(_commands.size() - 1);
+    auto iDisp = LastDisplayed;
 
     if (_commands.size() == 0)
     {
         return {};
     }
 
-    SHORT const nDel = iDel;
-    if ((nDel < iFirst) || (nDel > iLast))
+    const auto nDel = iDel;
+    if (nDel < iFirst || nDel > iLast)
     {
         return {};
     }
@@ -475,7 +459,7 @@ std::wstring CommandHistory::Remove(const SHORT iDel)
         if (iDel < iLast)
         {
             _commands.erase(_commands.cbegin() + iDel);
-            if ((iDisp > iDel) && (iDisp <= iLast))
+            if (iDisp > iDel && iDisp <= iLast)
             {
                 _Dec(iDisp);
             }
@@ -484,7 +468,7 @@ std::wstring CommandHistory::Remove(const SHORT iDel)
         else if (iFirst <= iDel)
         {
             _commands.erase(_commands.cbegin() + iDel);
-            if ((iDisp >= iFirst) && (iDisp < iDel))
+            if (iDisp >= iFirst && iDisp < iDel)
             {
                 _Inc(iDisp);
             }
@@ -502,8 +486,8 @@ std::wstring CommandHistory::Remove(const SHORT iDel)
 // Routine Description:
 // - this routine finds the most recent command that starts with the letters already in the current command.  it returns the array index (no mod needed).
 [[nodiscard]] bool CommandHistory::FindMatchingCommand(const std::wstring_view givenCommand,
-                                                       const SHORT startingIndex,
-                                                       SHORT& indexFound,
+                                                       const int startingIndex,
+                                                       int& indexFound,
                                                        const MatchOptions options)
 {
     indexFound = startingIndex;
@@ -529,10 +513,10 @@ std::wstring CommandHistory::Remove(const SHORT iDel)
 
     try
     {
-        for (size_t i = 0; i < _commands.size(); i++)
+        for (int i = 0; i < _commands.size(); i++)
         {
             const auto& storedCommand = _commands.at(indexFound);
-            if ((WI_IsFlagClear(options, MatchOptions::ExactMatch) && (givenCommand.size() <= storedCommand.size())) || (givenCommand.size() == storedCommand.size()))
+            if (WI_IsFlagClear(options, MatchOptions::ExactMatch) && givenCommand.size() <= storedCommand.size() || givenCommand.size() == storedCommand.size())
             {
                 if (std::equal(storedCommand.begin(),
                                storedCommand.begin() + givenCommand.size(),
@@ -564,7 +548,7 @@ void CommandHistory::s_ClearHistoryListStorage()
 // Arguments:
 // - indexA - index of one history item to swap
 // - indexB - index of one history item to swap
-void CommandHistory::Swap(const short indexA, const short indexB)
+void CommandHistory::Swap(const int indexA, const int indexB)
 {
     std::swap(_commands.at(indexA), _commands.at(indexB));
 }
@@ -686,11 +670,10 @@ HRESULT GetConsoleCommandHistoryLengthImplHelper(const std::wstring_view exeName
         size_t cchNeeded = 0;
 
         // Every command history item is made of a string length followed by 1 null character.
-        size_t const cchNull = 1;
+        static constexpr auto cchNull = 1;
 
-        for (SHORT i = 0; i < gsl::narrow<SHORT>(pCommandHistory->GetNumberOfCommands()); i++)
+        for (const auto& command : pCommandHistory->GetCommands())
         {
-            const auto command = pCommandHistory->GetNth(i);
             size_t cchCommand = command.size();
 
             // If we're counting how much multibyte space will be needed, trial convert the command string before we add.
@@ -793,13 +776,11 @@ HRESULT GetConsoleCommandHistoryWImplHelper(const std::wstring_view exeName,
 
         size_t cchTotalLength = 0;
 
-        size_t const cchNull = 1;
+        static constexpr auto cchNull = 1;
 
-        for (SHORT i = 0; i < gsl::narrow<SHORT>(CommandHistory->GetNumberOfCommands()); i++)
+        for (const auto& command : CommandHistory->GetCommands())
         {
-            const auto command = CommandHistory->GetNth(i);
-
-            size_t const cchCommand = command.size();
+            const auto cchCommand = command.size();
 
             size_t cchNeeded;
             RETURN_IF_FAILED(SizeTAdd(cchCommand, cchNull, &cchNeeded));

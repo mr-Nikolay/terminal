@@ -357,7 +357,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
                 _bits.set(_rc.index_of(pt));
             }
 
-            void set(const til::rect rc)
+            void set(const til::rect& rc)
             {
                 THROW_HR_IF(E_INVALIDARG, !_rc.contains(rc));
                 _runs.reset(); // reset cached runs on any non-const method

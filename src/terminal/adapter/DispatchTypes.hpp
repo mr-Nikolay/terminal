@@ -98,8 +98,8 @@ namespace Microsoft::Console::VirtualTerminal
         {
         }
 
-        constexpr VTParameter(const size_t rhs) noexcept :
-            _value{ gsl::narrow_cast<decltype(_value)>(rhs) }
+        constexpr VTParameter(const int rhs) noexcept :
+            _value{ rhs }
         {
         }
 
@@ -109,31 +109,31 @@ namespace Microsoft::Console::VirtualTerminal
             return _value >= 0;
         }
 
-        constexpr size_t value() const noexcept
+        constexpr int value() const noexcept
         {
             return _value;
         }
 
-        constexpr size_t value_or(size_t defaultValue) const noexcept
+        template<typename T = int>
+        constexpr T value_or(T defaultValue) const noexcept
         {
             return has_value() ? _value : defaultValue;
         }
 
-        template<typename T, std::enable_if_t<sizeof(T) == sizeof(size_t), int> = 0>
+        template<typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
         constexpr operator T() const noexcept
         {
-            // For most selective parameters, omitted values will default to 0.
             return static_cast<T>(value_or(0));
         }
 
-        constexpr operator size_t() const noexcept
+        constexpr operator int() const noexcept
         {
             // For numeric parameters, both 0 and omitted values will default to 1.
-            return has_value() && _value != 0 ? _value : 1;
+            return _value > 0 ? _value : 1;
         }
 
     private:
-        std::make_signed<size_t>::type _value;
+        int _value;
     };
 
     class VTParameters
@@ -177,7 +177,7 @@ namespace Microsoft::Console::VirtualTerminal
         {
             // We always return at least 1 value here, since an empty parameter
             // list is the equivalent of a single "default" parameter.
-            auto success = predicate(at(0));
+            bool success = predicate(at(0));
             for (auto i = 1u; i < _values.size(); i++)
             {
                 success = predicate(_values[i]) && success;
@@ -201,19 +201,13 @@ namespace Microsoft::Console::VirtualTerminal
     // };
     //
     // It will produce an error if the provided flag value sets multiple bits.
-    template<typename T, T Flag>
+    template<int Flag>
     class FlaggedEnumValue
     {
-        template<T Value>
-        struct ZeroOrOneBitChecker
-        {
-            static_assert(Value == 0 || (((Value - 1) & Value) == 0), "zero or one flags expected");
-            static constexpr T value = Value;
-        };
-
     public:
-        static constexpr T mask{ ZeroOrOneBitChecker<Flag>::value };
-        constexpr FlaggedEnumValue(const T value) :
+        static constexpr int mask{ WI_StaticAssertSingleBitSet(Flag) };
+
+        constexpr FlaggedEnumValue(const int value) :
             _value{ value }
         {
         }
@@ -223,25 +217,25 @@ namespace Microsoft::Console::VirtualTerminal
         {
         }
 
-        template<typename U, std::enable_if_t<sizeof(U) == sizeof(size_t), int> = 0>
-        constexpr operator U() const noexcept
+        template<typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+        constexpr operator T() const noexcept
         {
-            return static_cast<U>(_value | mask);
+            return static_cast<T>(_value | mask);
         }
 
-        constexpr operator T() const noexcept
+        constexpr operator int() const noexcept
         {
             return _value | mask;
         }
 
     private:
-        T _value;
+        int _value;
     };
 }
 
 namespace Microsoft::Console::VirtualTerminal::DispatchTypes
 {
-    enum class EraseType : size_t
+    enum class EraseType
     {
         ToEnd = 0,
         FromBeginning = 1,
@@ -249,7 +243,7 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         Scrollback = 3
     };
 
-    enum class TaskbarState : size_t
+    enum class TaskbarState
     {
         Clear = 0,
         Set = 1,
@@ -258,7 +252,7 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         Paused = 4
     };
 
-    enum GraphicsOptions : size_t
+    enum GraphicsOptions
     {
         Off = 0,
         BoldBright = 1,
@@ -337,7 +331,7 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
     //      Ps = 3 0  =>  Foreground color.
     //      Ps = 3 1  =>  Background color.
     //
-    enum class SgrSaveRestoreStackOptions : size_t
+    enum class SgrSaveRestoreStackOptions
     {
         All = 0,
         Boldness = 1,
@@ -354,16 +348,16 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         Max = SaveBackgroundColor
     };
 
-    enum class AnsiStatusType : size_t
+    enum class AnsiStatusType
     {
         OS_OperatingStatus = 5,
         CPR_CursorPositionReport = 6,
     };
 
-    using ANSIStandardMode = FlaggedEnumValue<size_t, 0x00000000>;
-    using DECPrivateMode = FlaggedEnumValue<size_t, 0x01000000>;
+    using ANSIStandardMode = FlaggedEnumValue<0x00000000>;
+    using DECPrivateMode = FlaggedEnumValue<0x01000000>;
 
-    enum ModeParams : size_t
+    enum ModeParams
     {
         DECCKM_CursorKeysMode = DECPrivateMode(1),
         DECANM_AnsiMode = DECPrivateMode(2),
@@ -397,20 +391,20 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         UTF8 = VTID("G")
     };
 
-    enum TabClearType : size_t
+    enum TabClearType
     {
         ClearCurrentColumn = 0,
         ClearAllColumns = 3
     };
 
-    enum WindowManipulationType : size_t
+    enum WindowManipulationType
     {
         Invalid = 0,
         RefreshWindow = 7,
         ResizeWindowInCharacters = 8,
     };
 
-    enum class CursorStyle : size_t
+    enum class CursorStyle
     {
         UserDefault = 0, // Implemented as "restore cursor to user default".
         BlinkingBlock = 1,
@@ -421,7 +415,7 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         SteadyBar = 6
     };
 
-    enum class ReportingPermission : size_t
+    enum class ReportingPermission
     {
         Unsolicited = 0,
         Solicited = 1
@@ -434,14 +428,14 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         DependsOnMode
     };
 
-    enum class DrcsEraseControl : size_t
+    enum class DrcsEraseControl
     {
         AllChars = 0,
         ReloadedChars = 1,
         AllRenditions = 2
     };
 
-    enum class DrcsCellMatrix : size_t
+    enum class DrcsCellMatrix
     {
         Default = 0,
         Invalid = 1,
@@ -450,7 +444,7 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         Size7x10 = 4
     };
 
-    enum class DrcsFontSet : size_t
+    enum class DrcsFontSet
     {
         Default = 0,
         Size80x24 = 1,
@@ -461,14 +455,14 @@ namespace Microsoft::Console::VirtualTerminal::DispatchTypes
         Size132x48 = 22
     };
 
-    enum class DrcsFontUsage : size_t
+    enum class DrcsFontUsage
     {
         Default = 0,
         Text = 1,
         FullCell = 2
     };
 
-    enum class DrcsCharsetSize : size_t
+    enum class DrcsCharsetSize
     {
         Size94 = 0,
         Size96 = 1

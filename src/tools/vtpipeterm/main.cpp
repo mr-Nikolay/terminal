@@ -261,10 +261,10 @@ void handleResize()
     bool fSuccess = !!GetConsoleScreenBufferInfoEx(hOut, &csbiex);
     if (fSuccess)
     {
-        SMALL_RECT srViewport = csbiex.srWindow;
+        auto srViewport = csbiex.srWindow;
 
-        unsigned short width = srViewport.Right - srViewport.Left + 1;
-        unsigned short height = srViewport.Bottom - srViewport.Top + 1;
+        unsigned auto width = srViewport.right - srViewport.left + 1;
+        unsigned auto height = srViewport.bottom - srViewport.top + 1;
 
         doResize(width, height);
     }

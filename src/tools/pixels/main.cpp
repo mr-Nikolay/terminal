@@ -22,19 +22,19 @@ void PrintRect(LPCWSTR pwszLabel, RECT& rc)
     wcout << foo.Get() << endl;
 }
 
-void PrintRect(LPCWSTR pwszLabel, SMALL_RECT& rc)
+void PrintRect(LPCWSTR pwszLabel, til::inclusive_rect& rc)
 {
     LocalMemNativeString foo;
-    foo.InitializeFormat(L" L: %5d R: %5d T: %5d B: %5d (W: %5d H: %5d)", rc.Left, rc.Right, rc.Top, rc.Bottom, rc.Right - rc.Left + 1, rc.Bottom - rc.Top + 1);
+    foo.InitializeFormat(L" L: %5d R: %5d T: %5d B: %5d (W: %5d H: %5d)", rc.left, rc.right, rc.top, rc.bottom, rc.right - rc.left + 1, rc.bottom - rc.top + 1);
 
     wcout << pwszLabel << " (inclusive rect)" << endl;
     wcout << foo.Get() << endl;
 }
 
-void PrintSize(LPCWSTR pwszLabel, COORD& sz)
+void PrintSize(LPCWSTR pwszLabel, til::point& sz)
 {
     LocalMemNativeString foo;
-    foo.InitializeFormat(L"%37s(W: %5d H: %5d)", L"", sz.X, sz.Y);
+    foo.InitializeFormat(L"%37s(W: %5d H: %5d)", L"", sz.x, sz.y);
 
     wcout << pwszLabel << endl;
     wcout << foo.Get() << endl;
@@ -185,28 +185,28 @@ int __cdecl wmain(int /*argc*/, WCHAR* /*argv*/[])
 
         if (pfn != nullptr)
         {
-            sz.cx = (SHORT)pfn(SM_CXVSCROLL, dpix);
-            sz.cy = (SHORT)pfn(SM_CYHSCROLL, dpiy);
+            sz.cx = pfn(SM_CXVSCROLL, dpix);
+            sz.cy = pfn(SM_CYHSCROLL, dpiy);
             fGotMetrics = true;
         }
     }
 
     if (!fGotMetrics)
     {
-        sz.cx = (SHORT)GetSystemMetrics(SM_CXVSCROLL);
-        sz.cy = (SHORT)GetSystemMetrics(SM_CYHSCROLL);
+        sz.cx = GetSystemMetrics(SM_CXVSCROLL);
+        sz.cy = GetSystemMetrics(SM_CYHSCROLL);
     }
 
     PrintSize(L"Scroll Bar Reservations   (scaled):", sz);
 
     SIZE szScrollScaled = sz;
 
-    COORD coordFont = GetConsoleFontSize(hOut, 0);
+    auto coordFont = GetConsoleFontSize(hOut, 0);
 
     PrintSize(L"Font Size              (unscaled):", coordFont);
 
-    sz.cx = MulDiv(coordFont.X, dpix, 96);
-    sz.cy = MulDiv(coordFont.Y, dpiy, 96);
+    sz.cx = MulDiv(coordFont.x, dpix, 96);
+    sz.cy = MulDiv(coordFont.y, dpiy, 96);
 
     PrintSize(L"Font Size                (scaled):", sz);
 
@@ -242,8 +242,8 @@ int __cdecl wmain(int /*argc*/, WCHAR* /*argv*/[])
         SIZE szCharLeftover;
         szCharLeftover.cx = szClient.cx % szFontScaled.cx;
         szCharLeftover.cy = szClient.cy % szFontScaled.cy;
-        bool fHorizScroll = (csbiex.dwSize.X > (szClient.cx / szFontScaled.cx));
-        bool fVertScroll = (csbiex.dwSize.Y > (szClient.cy / szFontScaled.cy));
+        bool fHorizScroll = (csbiex.dwSize.x > (szClient.cx / szFontScaled.cx));
+        bool fVertScroll = (csbiex.dwSize.y > (szClient.cy / szFontScaled.cy));
 
         wcout << "Start with adjusted window dimensions (scaled for DPI). We take the outer window rect and ask the system to scale it down to what we could use for a client." << endl
               << endl;
@@ -254,7 +254,7 @@ int __cdecl wmain(int /*argc*/, WCHAR* /*argv*/[])
         wcout << " with " << szCharLeftover.cx << " pixels leftover" << endl;
         wcout << "This is the number of characters we could fit in the window if Vertical doesn't need its scroll bar." << endl;
         wcout << "Now check if we will need to steal some of Vertical's space for our Horizontal scroll bar." << endl;
-        wcout << " Is < buffer of : " << csbiex.dwSize.X << endl;
+        wcout << " Is < buffer of : " << csbiex.dwSize.x << endl;
         wcout << " H-scroll needed= " << fHorizScroll << endl;
         wcout << endl;
         wcout << "Height: " << endl;
@@ -264,7 +264,7 @@ int __cdecl wmain(int /*argc*/, WCHAR* /*argv*/[])
         wcout << " with " << szCharLeftover.cy << " pixels leftover" << endl;
         wcout << "This is the number of characters we could fit in the window if Horizontal doesn't need its scroll bar." << endl;
         wcout << "Now check if we will need to steal some of Horizontal's space for our Vertical scroll bar." << endl;
-        wcout << " Is < buffer of : " << csbiex.dwSize.Y << endl;
+        wcout << " Is < buffer of : " << csbiex.dwSize.y << endl;
         wcout << " V-scroll needed= " << fVertScroll << endl;
         wcout << endl;
 

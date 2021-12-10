@@ -29,31 +29,31 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 {
     _runLength = sizeof(CD_IO_CHARACTER) * DisplayWidth;
 
-    _fontSize.X = FontWidth > SHORT_MAX ? SHORT_MAX : (SHORT)FontWidth;
-    _fontSize.Y = FontHeight > SHORT_MAX ? SHORT_MAX : (SHORT)FontHeight;
+    _fontSize.x = FontWidth > SHORT_MAX ? SHORT_MAX : FontWidth;
+    _fontSize.y = FontHeight > SHORT_MAX ? SHORT_MAX : FontHeight;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::Invalidate(const SMALL_RECT* const /*psrRegion*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::Invalidate(const til::inclusive_rect /*psrRegion*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::InvalidateCursor(const SMALL_RECT* const /*psrRegion*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::InvalidateCursor(const til::inclusive_rect /*psrRegion*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::InvalidateSystem(const RECT* const /*prcDirtyClient*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::InvalidateSystem(const til::rect& /*prcDirtyClient*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::InvalidateSelection(const std::vector<SMALL_RECT>& /*rectangles*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::InvalidateSelection(const std::vector<til::inclusive_rect>& /*rectangles*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::InvalidateScroll(const COORD* const /*pcoordDelta*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::InvalidateScroll(til::point /*pcoordDelta*/) noexcept
 {
     return S_OK;
 }
@@ -91,7 +91,7 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 
     if (NT_SUCCESS(Status))
     {
-        for (SHORT i = 0; i < _displayHeight; i++)
+        for (auto i = 0; i < _displayHeight; i++)
         {
             OldRunBase = (PVOID)(_sharedViewBase + (i * 2 * _runLength));
             NewRunBase = (PVOID)(_sharedViewBase + (i * 2 * _runLength) + _runLength);
@@ -127,7 +127,7 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
     PCD_IO_CHARACTER OldRun;
     PCD_IO_CHARACTER NewRun;
 
-    for (SHORT i = 0; i < _displayHeight; i++)
+    for (auto i = 0; i < _displayHeight; i++)
     {
         OldRunBase = (PVOID)(_sharedViewBase + (i * 2 * _runLength));
         NewRunBase = (PVOID)(_sharedViewBase + (i * 2 * _runLength) + _runLength);
@@ -135,7 +135,7 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
         OldRun = (PCD_IO_CHARACTER)OldRunBase;
         NewRun = (PCD_IO_CHARACTER)NewRunBase;
 
-        for (SHORT j = 0; j < _displayWidth; j++)
+        for (auto j = 0; j < _displayWidth; j++)
         {
             NewRun[j].Character = L' ';
             NewRun[j].Attribute = 0;
@@ -146,19 +146,19 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 }
 
 [[nodiscard]] HRESULT BgfxEngine::PaintBufferLine(const gsl::span<const Cluster> clusters,
-                                                  const COORD coord,
+                                                  const til::point coord,
                                                   const bool /*trimLeft*/,
                                                   const bool /*lineWrapped*/) noexcept
 {
     try
     {
-        PVOID NewRunBase = (PVOID)(_sharedViewBase + (coord.Y * 2 * _runLength) + _runLength);
+        PVOID NewRunBase = (PVOID)(_sharedViewBase + (coord.y * 2 * _runLength) + _runLength);
         PCD_IO_CHARACTER NewRun = (PCD_IO_CHARACTER)NewRunBase;
 
         for (size_t i = 0; i < clusters.size() && i < (size_t)_displayWidth; i++)
         {
-            NewRun[coord.X + i].Character = til::at(clusters, i).GetTextAsSingle();
-            NewRun[coord.X + i].Attribute = _currentLegacyColorAttribute;
+            NewRun[coord.x + i].Character = til::at(clusters, i).GetTextAsSingle();
+            NewRun[coord.x + i].Attribute = _currentLegacyColorAttribute;
         }
 
         return S_OK;
@@ -169,12 +169,12 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 [[nodiscard]] HRESULT BgfxEngine::PaintBufferGridLines(GridLineSet const /*lines*/,
                                                        COLORREF const /*color*/,
                                                        size_t const /*cchLine*/,
-                                                       COORD const /*coordTarget*/) noexcept
+                                                       til::point /*coordTarget*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::PaintSelection(const SMALL_RECT /*rect*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::PaintSelection(const til::rect& /*rect*/) noexcept
 {
     return S_OK;
 }
@@ -184,8 +184,8 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
     // TODO: MSFT: 11448021 - Modify BGFX to support rendering full-width
     // characters and a full-width cursor.
     CD_IO_CURSOR_INFORMATION CursorInfo;
-    CursorInfo.Row = options.coordCursor.Y;
-    CursorInfo.Column = options.coordCursor.X;
+    CursorInfo.Row = options.coordCursor.y;
+    CursorInfo.Column = options.coordCursor.x;
     CursorInfo.Height = options.ulCursorHeightPercent;
     CursorInfo.IsVisible = TRUE;
 
@@ -221,7 +221,7 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 // - srNewViewport - The bounds of the new viewport.
 // Return Value:
 // - HRESULT S_OK
-[[nodiscard]] HRESULT BgfxEngine::UpdateViewport(const SMALL_RECT /*srNewViewport*/) noexcept
+[[nodiscard]] HRESULT BgfxEngine::UpdateViewport(const til::inclusive_rect /*srNewViewport*/) noexcept
 {
     return S_OK;
 }
@@ -233,11 +233,11 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
 
 [[nodiscard]] HRESULT BgfxEngine::GetDirtyArea(gsl::span<const til::rect>& area) noexcept
 {
-    SMALL_RECT r;
-    r.Bottom = _displayHeight > 0 ? (SHORT)(_displayHeight - 1) : 0;
-    r.Top = 0;
-    r.Left = 0;
-    r.Right = _displayWidth > 0 ? (SHORT)(_displayWidth - 1) : 0;
+    til::inclusive_rect r;
+    r.bottom = _displayHeight > 0 ? (_displayHeight - 1) : 0;
+    r.top = 0;
+    r.left = 0;
+    r.right = _displayWidth > 0 ? (_displayWidth - 1) : 0;
 
     _dirtyArea = r;
 
@@ -247,7 +247,7 @@ BgfxEngine::BgfxEngine(PVOID SharedViewBase, LONG DisplayHeight, LONG DisplayWid
     return S_OK;
 }
 
-[[nodiscard]] HRESULT BgfxEngine::GetFontSize(_Out_ COORD* const pFontSize) noexcept
+[[nodiscard]] HRESULT BgfxEngine::GetFontSize(_Out_ til::size& pFontSize) noexcept
 {
     *pFontSize = _fontSize;
     return S_OK;

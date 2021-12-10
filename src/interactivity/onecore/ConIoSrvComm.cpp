@@ -368,11 +368,11 @@ VOID ConIoSrvComm::HandleFocusEvent(PCIS_EVENT Event)
                     RECT rcDisplay = pWddmConEngine->GetDisplaySize();
 
                     // Get font to adjust char to pixels.
-                    COORD coordFont = { 0 };
+                    til::point coordFont;
                     LOG_IF_FAILED(pWddmConEngine->GetFontSize(&coordFont));
 
-                    rcDisplay.right *= coordFont.X;
-                    rcDisplay.bottom *= coordFont.Y;
+                    rcDisplay.right *= coordFont.x;
+                    rcDisplay.bottom *= coordFont.y;
 
                     // Ask the screen buffer to resize itself (and all related components) based on the screen size.
                     globals.getConsoleInformation().GetActiveOutputBuffer().ProcessResizeWindow(&rcDisplay, &rcOld);

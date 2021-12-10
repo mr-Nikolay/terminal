@@ -367,7 +367,7 @@ void DbcsWriteRead::SendOutput(const HANDLE hOut,
 {
     // DBCS is very dependent on knowing the byte length in the original codepage of the input text.
     // Save off the original length of the string so we know what its A length was.
-    SHORT const cTestString = (SHORT)strlen(pszTestString);
+    SHORT const cTestString = strlen(pszTestString);
 
     // If we're in Unicode mode, we will need to translate the test string to Unicode before passing into the console
     PWSTR pwszTestString = nullptr;
@@ -387,7 +387,7 @@ void DbcsWriteRead::SendOutput(const HANDLE hOut,
     SHORT cChars = 0;
     if (fIsUnicode)
     {
-        cChars = (SHORT)wcslen(pwszTestString);
+        cChars = wcslen(pwszTestString);
     }
     else
     {
@@ -1850,7 +1850,7 @@ void DbcsWriteRead::TestRunner(_In_ unsigned int const uiCodePage,
     CHAR_INFO* pciActual = new CHAR_INFO[cTestData];
     VERIFY_IS_NOT_NULL(pciActual);
     ZeroMemory(pciActual, sizeof(CHAR_INFO) * cTestData);
-    DbcsWriteRead::RetrieveOutput(hOut, ReadMode, fReadWithUnicode, pciActual, (SHORT)cTestData);
+    DbcsWriteRead::RetrieveOutput(hOut, ReadMode, fReadWithUnicode, pciActual, cTestData);
 
     // Loop through and verify that our expected array matches what was actually returned by the given API.
     DbcsWriteRead::Verify(pciExpected, cExpected, pciActual);

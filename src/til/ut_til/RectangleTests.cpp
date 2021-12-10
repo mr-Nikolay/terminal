@@ -107,11 +107,11 @@ class RectangleTests
 
     TEST_METHOD(SmallRectConstruct)
     {
-        SMALL_RECT sr;
-        sr.Left = 5;
-        sr.Top = 10;
-        sr.Right = 14;
-        sr.Bottom = 19;
+        til::inclusive_rect sr;
+        sr.left = 5;
+        sr.top = 10;
+        sr.right = 14;
+        sr.bottom = 19;
 
         const til::rect rc{ sr };
         VERIFY_ARE_EQUAL(5, rc.left);
@@ -968,11 +968,11 @@ class RectangleTests
         Log::Comment(L"Typical situation.");
         {
             const til::rect rc{ 5, 10, 15, 20 };
-            const auto val = rc.to_small_rect();
-            VERIFY_ARE_EQUAL(5, val.Left);
-            VERIFY_ARE_EQUAL(10, val.Top);
-            VERIFY_ARE_EQUAL(14, val.Right);
-            VERIFY_ARE_EQUAL(19, val.Bottom);
+            const auto val = rc.to_inclusive_rect();
+            VERIFY_ARE_EQUAL(5, val.left);
+            VERIFY_ARE_EQUAL(10, val.top);
+            VERIFY_ARE_EQUAL(14, val.right);
+            VERIFY_ARE_EQUAL(19, val.bottom);
         }
 
         Log::Comment(L"Overflow on left.");
@@ -984,7 +984,7 @@ class RectangleTests
             const til::rect rc{ l, t, r, b };
 
             auto fn = [&]() {
-                const auto val = rc.to_small_rect();
+                const auto val = rc.to_inclusive_rect();
             };
 
             VERIFY_THROWS(fn(), gsl::narrowing_error);
@@ -999,7 +999,7 @@ class RectangleTests
             const til::rect rc{ l, t, r, b };
 
             auto fn = [&]() {
-                const auto val = rc.to_small_rect();
+                const auto val = rc.to_inclusive_rect();
             };
 
             VERIFY_THROWS(fn(), gsl::narrowing_error);
@@ -1014,7 +1014,7 @@ class RectangleTests
             const til::rect rc{ l, t, r, b };
 
             auto fn = [&]() {
-                const auto val = rc.to_small_rect();
+                const auto val = rc.to_inclusive_rect();
             };
 
             VERIFY_THROWS(fn(), gsl::narrowing_error);
@@ -1029,7 +1029,7 @@ class RectangleTests
             const til::rect rc{ l, t, r, b };
 
             auto fn = [&]() {
-                const auto val = rc.to_small_rect();
+                const auto val = rc.to_inclusive_rect();
             };
 
             VERIFY_THROWS(fn(), gsl::narrowing_error);

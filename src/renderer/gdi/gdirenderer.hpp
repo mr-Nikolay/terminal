@@ -27,11 +27,11 @@ namespace Microsoft::Console::Render
 
         [[nodiscard]] HRESULT SetHwnd(const HWND hwnd) noexcept;
 
-        [[nodiscard]] HRESULT InvalidateSelection(const std::vector<SMALL_RECT>& rectangles) noexcept override;
-        [[nodiscard]] HRESULT InvalidateScroll(const COORD* const pcoordDelta) noexcept override;
-        [[nodiscard]] HRESULT InvalidateSystem(const RECT* const prcDirtyClient) noexcept override;
-        [[nodiscard]] HRESULT Invalidate(const SMALL_RECT* const psrRegion) noexcept override;
-        [[nodiscard]] HRESULT InvalidateCursor(const SMALL_RECT* const psrRegion) noexcept override;
+        [[nodiscard]] HRESULT InvalidateSelection(const std::vector<til::rect>& rectangles) noexcept override;
+        [[nodiscard]] HRESULT InvalidateScroll(til::point pcoordDelta) noexcept override;
+        [[nodiscard]] HRESULT InvalidateSystem(const til::rect& prcDirtyClient) noexcept override;
+        [[nodiscard]] HRESULT Invalidate(const til::rect& psrRegion) noexcept override;
+        [[nodiscard]] HRESULT InvalidateCursor(const til::rect& psrRegion) noexcept override;
         [[nodiscard]] HRESULT InvalidateAll() noexcept override;
         [[nodiscard]] HRESULT InvalidateCircling(_Out_ bool* const pForcePaint) noexcept override;
         [[nodiscard]] HRESULT PrepareForTeardown(_Out_ bool* const pForcePaint) noexcept override;
@@ -49,14 +49,14 @@ namespace Microsoft::Console::Render
 
         [[nodiscard]] HRESULT PaintBackground() noexcept override;
         [[nodiscard]] HRESULT PaintBufferLine(gsl::span<const Cluster> const clusters,
-                                              const COORD coord,
+                                              const til::point coord,
                                               const bool trimLeft,
                                               const bool lineWrapped) noexcept override;
         [[nodiscard]] HRESULT PaintBufferGridLines(const GridLineSet lines,
                                                    const COLORREF color,
                                                    const size_t cchLine,
-                                                   const COORD coordTarget) noexcept override;
-        [[nodiscard]] HRESULT PaintSelection(const SMALL_RECT rect) noexcept override;
+                                                   const til::point coordTarget) noexcept override;
+        [[nodiscard]] HRESULT PaintSelection(const til::rect& rect) noexcept override;
 
         [[nodiscard]] HRESULT PaintCursor(const CursorOptions& options) noexcept override;
 
@@ -67,17 +67,17 @@ namespace Microsoft::Console::Render
         [[nodiscard]] HRESULT UpdateFont(const FontInfoDesired& FontInfoDesired,
                                          _Out_ FontInfo& FontInfo) noexcept override;
         [[nodiscard]] HRESULT UpdateSoftFont(const gsl::span<const uint16_t> bitPattern,
-                                             const SIZE cellSize,
+                                             const til::size cellSize,
                                              const size_t centeringHint) noexcept override;
         [[nodiscard]] HRESULT UpdateDpi(const int iDpi) noexcept override;
-        [[nodiscard]] HRESULT UpdateViewport(const SMALL_RECT srNewViewport) noexcept override;
+        [[nodiscard]] HRESULT UpdateViewport(const til::inclusive_rect srNewViewport) noexcept override;
 
         [[nodiscard]] HRESULT GetProposedFont(const FontInfoDesired& FontDesired,
                                               _Out_ FontInfo& Font,
                                               const int iDpi) noexcept override;
 
         [[nodiscard]] HRESULT GetDirtyArea(gsl::span<const til::rect>& area) noexcept override;
-        [[nodiscard]] HRESULT GetFontSize(_Out_ COORD* const pFontSize) noexcept override;
+        [[nodiscard]] HRESULT GetFontSize(_Out_ til::size& pFontSize) noexcept override;
         [[nodiscard]] HRESULT IsGlyphWideByFont(const std::wstring_view glyph, _Out_ bool* const pResult) noexcept override;
 
     protected:
@@ -121,7 +121,7 @@ namespace Microsoft::Console::Render
         };
 
         LineMetrics _lineMetrics;
-        COORD _coordFontLast;
+        til::size _coordFontLast;
         int _iCurrentDpi;
 
         static const int s_iBaseDpi = USER_DEFAULT_SCREEN_DPI;
@@ -155,20 +155,20 @@ namespace Microsoft::Console::Render
         std::pmr::vector<std::pmr::wstring> _polyStrings;
         std::pmr::vector<std::pmr::basic_string<int>> _polyWidths;
 
-        [[nodiscard]] HRESULT _InvalidCombine(const RECT* const prc) noexcept;
+        HRESULT _InvalidCombine(const RECT& prc) noexcept;
         [[nodiscard]] HRESULT _InvalidOffset(const POINT* const ppt) noexcept;
         [[nodiscard]] HRESULT _InvalidRestrict() noexcept;
 
-        [[nodiscard]] HRESULT _InvalidateRect(const RECT* const prc) noexcept;
+        [[nodiscard]] HRESULT _InvalidateRect(const RECT& prc) noexcept;
 
         [[nodiscard]] HRESULT _PaintBackgroundColor(const RECT* const prc) noexcept;
 
         static const ULONG s_ulMinCursorHeightPercent = 25;
         static const ULONG s_ulMaxCursorHeightPercent = 100;
 
-        [[nodiscard]] HRESULT _ScaleByFont(const COORD* const pcoord, _Out_ POINT* const pPoint) const noexcept;
-        [[nodiscard]] HRESULT _ScaleByFont(const SMALL_RECT* const psr, _Out_ RECT* const prc) const noexcept;
-        [[nodiscard]] HRESULT _ScaleByFont(const RECT* const prc, _Out_ SMALL_RECT* const psr) const noexcept;
+        [[nodiscard]] HRESULT _ScaleByFont(til::point pcoord, _Out_ POINT* const pPoint) const noexcept;
+        [[nodiscard]] HRESULT _ScaleByFont(const til::rect& psr, _Out_ RECT* const prc) const noexcept;
+        [[nodiscard]] HRESULT _ScaleByFont(const RECT& prc, _Out_ til::inclusive_rect* const psr) const noexcept;
 
         static int s_ScaleByDpi(const int iPx, const int iDpi);
         static int s_ShrinkByDpi(const int iPx, const int iDpi);
@@ -177,7 +177,7 @@ namespace Microsoft::Console::Render
         SIZE _GetInvalidRectSize() const;
         SIZE _GetRectSize(const RECT* const pRect) const;
 
-        void _OrRect(_In_ RECT* const pRectExisting, const RECT* const pRectToOr) const;
+        void _OrRect(_In_ RECT* const pRectExisting, const RECT& pRectToOr) const;
 
         bool _IsFontTrueType() const;
 
@@ -187,7 +187,7 @@ namespace Microsoft::Console::Render
                                                _Inout_ wil::unique_hfont& hFont,
                                                _Inout_ wil::unique_hfont& hFontItalic) noexcept;
 
-        COORD _GetFontSize() const;
+        til::size _GetFontSize() const;
         bool _IsMinimized() const;
         bool _IsWindowValid() const;
 

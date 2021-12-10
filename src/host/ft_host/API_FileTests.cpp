@@ -170,7 +170,7 @@ void FileTests::TestWriteFileRaw()
     csbiexAfter.cbSize = sizeof(csbiexAfter);
     VERIFY_WIN32_BOOL_SUCCEEDED(GetConsoleScreenBufferInfoEx(hOut, &csbiexAfter), L"Retrieve screen buffer properties after writing.");
 
-    csbiexBefore.dwCursorPosition.X += (SHORT)cchTest;
+    csbiexBefore.dwCursorPosition.X += cchTest;
     VERIFY_ARE_EQUAL(csbiexBefore.dwCursorPosition, csbiexAfter.dwCursorPosition, L"Verify cursor moved expected number of squares for the write length.");
 
     DWORD const cbReadBackBuffer = cchTest + 2; // +1 so we can read back a "space" that should be after what we wrote. +1 more so this can be null terminated for String class comparison.
@@ -476,7 +476,7 @@ void FileTests::TestWriteFileVTProcessing()
     else
     {
         COORD coordExpected = csbiexBefore.dwCursorPosition;
-        coordExpected.X += (SHORT)cchTest;
+        coordExpected.X += cchTest;
         VERIFY_ARE_EQUAL(coordExpected, csbiexAfter.dwCursorPosition, L"Verify cursor moved as characters should have been emitted, not consumed.");
 
         wistd::unique_ptr<char[]> pszReadBack;

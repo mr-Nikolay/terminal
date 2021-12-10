@@ -77,7 +77,7 @@ foreach ($var in $vars)
     # i. Contains "segment" --> define point at the beginning of a text segment
     if ($segmentHeuristic)
     {
-        $result += "constexpr til::point {0}{{ {1}, {2}.y() }};" -f $var, $var.Substring(0, 8), $var.Substring(9, $var.Length - $var.IndexOf("L") - 1);
+        $result += "constexpr til::point {0}{{ {1}, {2}.y }};" -f $var, $var.Substring(0, 8), $var.Substring(9, $var.Length - $var.IndexOf("L") - 1);
     }
     # ii. Contains number --> requires movement
     elseif ($movementHeuristic)
@@ -125,7 +125,7 @@ foreach ($var in $vars)
     elseif ($leftHeuristic)
     {
         $standardVar = $var.Split("Left")[0]
-        $result += "constexpr til::point {0}{{ bufferSize.left(), {1}.y() }};" -f $var, $standardVar;
+        $result += "constexpr til::point {0}{{ bufferSizeleft, {1}.y }};" -f $var, $standardVar;
     }
     $result += "`n";
 }

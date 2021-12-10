@@ -18,12 +18,12 @@ Viewport Terminal::GetViewport() noexcept
     return _GetVisibleViewport();
 }
 
-COORD Terminal::GetTextBufferEndPosition() const noexcept
+til::point Terminal::GetTextBufferEndPosition() const noexcept
 {
     // We use the end line of mutableViewport as the end
     // of the text buffer, it always moves with the written
     // text
-    COORD endPosition{ _GetMutableViewport().Width() - 1, gsl::narrow<short>(ViewEndIndex()) };
+    til::point endPosition{ _GetMutableViewport().Width() - 1, ViewEndIndex() };
     return endPosition;
 }
 
@@ -100,7 +100,7 @@ std::pair<COLORREF, COLORREF> Terminal::GetAttributeColors(const TextAttribute& 
     return colors;
 }
 
-COORD Terminal::GetCursorPosition() const noexcept
+til::point Terminal::GetCursorPosition() const noexcept
 {
     const auto& cursor = _buffer->GetCursor();
     return cursor.GetPosition();
@@ -171,10 +171,10 @@ const std::wstring Microsoft::Terminal::Core::Terminal::GetHyperlinkCustomId(uin
 // - The location
 // Return value:
 // - The pattern IDs of the location
-const std::vector<size_t> Terminal::GetPatternId(const COORD location) const noexcept
+const std::vector<size_t> Terminal::GetPatternId(const til::point location) const noexcept
 {
     // Look through our interval tree for this location
-    const auto intervals = _patternIntervalTree.findOverlapping(til::point{ location.X + 1, location.Y }, til::point{ location });
+    const auto intervals = _patternIntervalTree.findOverlapping(til::point{ location.x + 1, location.y }, location);
     if (intervals.size() == 0)
     {
         return {};
@@ -209,28 +209,28 @@ catch (...)
     return {};
 }
 
-void Terminal::SelectNewRegion(const COORD coordStart, const COORD coordEnd)
+void Terminal::SelectNewRegion(const til::point coordStart, const til::point coordEnd)
 {
 #pragma warning(push)
 #pragma warning(disable : 26496) // cpp core checks wants these const, but they're decremented below.
-    COORD realCoordStart = coordStart;
-    COORD realCoordEnd = coordEnd;
+    auto realCoordStart = coordStart;
+    auto realCoordEnd = coordEnd;
 #pragma warning(pop)
 
     bool notifyScrollChange = false;
-    if (coordStart.Y < _VisibleStartIndex())
+    if (coordStart.y < _VisibleStartIndex())
     {
         // recalculate the scrollOffset
-        _scrollOffset = ViewStartIndex() - coordStart.Y;
+        _scrollOffset = ViewStartIndex() - coordStart.y;
         notifyScrollChange = true;
     }
-    else if (coordEnd.Y > _VisibleEndIndex())
+    else if (coordEnd.y > _VisibleEndIndex())
     {
         // recalculate the scrollOffset, note that if the found text is
         // beneath the current visible viewport, it may be within the
         // current mutableViewport and the scrollOffset will be smaller
         // than 0
-        _scrollOffset = std::max(0, ViewStartIndex() - coordStart.Y);
+        _scrollOffset = std::max(0, ViewStartIndex() - coordStart.y);
         notifyScrollChange = true;
     }
 
@@ -240,8 +240,8 @@ void Terminal::SelectNewRegion(const COORD coordStart, const COORD coordEnd)
         _NotifyScrollEvent();
     }
 
-    realCoordStart.Y -= gsl::narrow<short>(_VisibleStartIndex());
-    realCoordEnd.Y -= gsl::narrow<short>(_VisibleStartIndex());
+    realCoordStart.y -= _VisibleStartIndex();
+    realCoordEnd.y -= _VisibleStartIndex();
 
     SetSelectionAnchor(realCoordStart);
     SetSelectionEnd(realCoordEnd, SelectionExpansion::Char);

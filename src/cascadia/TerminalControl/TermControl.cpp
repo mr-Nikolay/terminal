@@ -637,17 +637,15 @@ namespace winrt::Microsoft::Terminal::Control::implementation
             if (HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) == hr ||
                 HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND) == hr)
             {
-                message = { fmt::format(std::wstring_view{ RS_(L"PixelShaderNotFound") },
-                                        (_focused ? _core.FocusedAppearance() : _core.UnfocusedAppearance()).PixelShaderPath()) };
+                message = winrt::hstring{ fmt::format(std::wstring_view{ RS_(L"PixelShaderNotFound") }, (_focused ? _core.FocusedAppearance() : _core.UnfocusedAppearance()).PixelShaderPath()) };
             }
             else if (D2DERR_SHADER_COMPILE_FAILED == hr)
             {
-                message = { fmt::format(std::wstring_view{ RS_(L"PixelShaderCompileFailed") }) };
+                message = winrt::hstring{ fmt::format(std::wstring_view{ RS_(L"PixelShaderCompileFailed") }) };
             }
             else
             {
-                message = { fmt::format(std::wstring_view{ RS_(L"UnexpectedRendererError") },
-                                        hr) };
+                message = winrt::hstring{ fmt::format(std::wstring_view{ RS_(L"UnexpectedRendererError") }, hr) };
             }
 
             auto noticeArgs = winrt::make<NoticeEventArgs>(NoticeLevel::Warning, std::move(message));
@@ -1925,7 +1923,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         // ComCtl scrollbars, but it's certainly close enough.
         const auto scrollbarSize = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
 
-        double width = cols * actualFontSize.X;
+        double width = cols * actualFontSize.width;
 
         // Reserve additional space if scrollbar is intended to be visible
         if (scrollState == ScrollbarState::Visible)
@@ -1933,7 +1931,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
             width += scrollbarSize;
         }
 
-        double height = rows * actualFontSize.Y;
+        double height = rows * actualFontSize.height;
         const auto thickness = ParseThicknessFromPadding(padding);
         // GH#2061 - make sure to account for the size the padding _will be_ scaled to
         width += scale * (thickness.Left + thickness.Right);
@@ -2140,7 +2138,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
     //    NOTE: origin (0,0) is top-left.
     // Return Value:
     // - the corresponding viewport terminal position (in pixels) for the given Point parameter
-    const til::point TermControl::_toTerminalOrigin(winrt::Windows::Foundation::Point cursorPosition)
+    Core::Point TermControl::_toTerminalOrigin(winrt::Windows::Foundation::Point cursorPosition)
     {
         // cursorPosition is DIPs, relative to SwapChainPanel origin
         const til::point cursorPosInDIPs{ til::math::rounding, cursorPosition };
@@ -2155,7 +2153,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         const auto scaleY = panel.CompositionScaleY();
         const til::point relativeToMarginInPixels{ til::math::flooring, relativeToMarginInDIPs.x * scaleX, relativeToMarginInDIPs.y * scaleY };
 
-        return relativeToMarginInPixels;
+        return { relativeToMarginInPixels.x, relativeToMarginInPixels.y };
     }
 
     // Method Description:

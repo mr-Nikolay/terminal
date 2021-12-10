@@ -48,7 +48,7 @@ public:
 
     operator bool() const noexcept;
 
-    ptrdiff_t GetCellDistance(OutputCellIterator other) const noexcept;
+    til::CoordType GetCellDistance(OutputCellIterator other) const noexcept;
     ptrdiff_t GetInputDistance(OutputCellIterator other) const noexcept;
     friend ptrdiff_t operator-(OutputCellIterator one, OutputCellIterator two) = delete;
 
@@ -88,13 +88,10 @@ private:
 
     gsl::span<const WORD> _legacyAttrs;
 
-    std::variant<
-        std::wstring_view,
-        gsl::span<const WORD>,
-        gsl::span<const CHAR_INFO>,
-        gsl::span<const OutputCell>,
-        std::monostate>
-        _run;
+    std::wstring_view _runLoose;
+    gsl::span<const WORD> _runLegacyAttr;
+    gsl::span<const CHAR_INFO> _runCharInfo;
+    gsl::span<const OutputCell> _runCell;
 
     TextAttribute _attr;
 
@@ -120,6 +117,6 @@ private:
     OutputCellView _currentView;
 
     size_t _pos;
-    size_t _distance;
+    til::CoordType _distance;
     size_t _fillLimit;
 };

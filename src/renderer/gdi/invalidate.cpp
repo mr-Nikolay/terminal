@@ -17,20 +17,20 @@ using namespace Microsoft::Console::Render;
 // - prcDirtyClient - Pointer to pixel area (RECT) of client region the system believes is dirty
 // Return Value:
 // - HRESULT S_OK, GDI-based error code, or safemath error
-HRESULT GdiEngine::InvalidateSystem(const RECT* const prcDirtyClient) noexcept
+HRESULT GdiEngine::InvalidateSystem(const til::rect& prcDirtyClient) noexcept
 {
-    RETURN_HR(_InvalidCombine(prcDirtyClient));
+    RETURN_HR(_InvalidCombine(prcDirtyClient.to_win32_rect()));
 }
 
 // Routine Description:
 // - Notifies us that the console is attempting to scroll the existing screen area
 // Arguments:
-// - pcoordDelta - Pointer to character dimension (COORD) of the distance the console would like us to move while scrolling.
+// - pcoordDelta - Pointer to character dimension (til::point) of the distance the console would like us to move while scrolling.
 // Return Value:
 // - HRESULT S_OK, GDI-based error code, or safemath error
-HRESULT GdiEngine::InvalidateScroll(const COORD* const pcoordDelta) noexcept
+HRESULT GdiEngine::InvalidateScroll(til::point pcoordDelta) noexcept
 {
-    if (pcoordDelta->X != 0 || pcoordDelta->Y != 0)
+    if (pcoordDelta != til::point{})
     {
         POINT ptDelta = { 0 };
         RETURN_IF_FAILED(_ScaleByFont(pcoordDelta, &ptDelta));
@@ -54,11 +54,11 @@ HRESULT GdiEngine::InvalidateScroll(const COORD* const pcoordDelta) noexcept
 // - rectangles - Vector of rectangles to draw, line by line
 // Return Value:
 // - HRESULT S_OK or GDI-based error code
-HRESULT GdiEngine::InvalidateSelection(const std::vector<SMALL_RECT>& rectangles) noexcept
+HRESULT GdiEngine::InvalidateSelection(const std::vector<til::rect>& rectangles) noexcept
 {
     for (const auto& rect : rectangles)
     {
-        RETURN_IF_FAILED(Invalidate(&rect));
+        RETURN_IF_FAILED(Invalidate(rect));
     }
 
     return S_OK;
@@ -68,14 +68,14 @@ HRESULT GdiEngine::InvalidateSelection(const std::vector<SMALL_RECT>& rectangles
 // - Notifies us that the console has changed the character region specified.
 // - NOTE: This typically triggers on cursor or text buffer changes
 // Arguments:
-// - psrRegion - Character region (SMALL_RECT) that has been changed
+// - psrRegion - Character region (til::inclusive_rect) that has been changed
 // Return Value:
 // - S_OK, GDI related failure, or safemath failure.
-HRESULT GdiEngine::Invalidate(const SMALL_RECT* const psrRegion) noexcept
+HRESULT GdiEngine::Invalidate(const til::rect& psrRegion) noexcept
 {
     RECT rcRegion = { 0 };
     RETURN_IF_FAILED(_ScaleByFont(psrRegion, &rcRegion));
-    RETURN_HR(_InvalidateRect(&rcRegion));
+    RETURN_HR(_InvalidateRect(rcRegion));
 }
 
 // Routine Description:
@@ -84,7 +84,7 @@ HRESULT GdiEngine::Invalidate(const SMALL_RECT* const psrRegion) noexcept
 // - psrRegion - the region covered by the cursor
 // Return Value:
 // - S_OK, else an appropriate HRESULT for failing to allocate or write.
-HRESULT GdiEngine::InvalidateCursor(const SMALL_RECT* const psrRegion) noexcept
+HRESULT GdiEngine::InvalidateCursor(const til::rect& psrRegion) noexcept
 {
     return this->Invalidate(psrRegion);
 }
@@ -106,7 +106,7 @@ HRESULT GdiEngine::InvalidateAll() noexcept
 
     RECT rc;
     RETURN_HR_IF(E_FAIL, !(GetClientRect(_hwndTargetWindow, &rc)));
-    RETURN_HR(InvalidateSystem(&rc));
+    RETURN_HR(InvalidateSystem(til::rect{ rc }));
 }
 
 // Method Description:
@@ -145,11 +145,11 @@ HRESULT GdiEngine::PrepareForTeardown(_Out_ bool* const pForcePaint) noexcept
 // - prc - Pixel region (RECT) that should be repainted on the next frame
 // Return Value:
 // - S_OK, GDI related failure, or safemath failure.
-HRESULT GdiEngine::_InvalidCombine(const RECT* const prc) noexcept
+HRESULT GdiEngine::_InvalidCombine(const RECT& prc) noexcept
 {
     if (!_fInvalidRectUsed)
     {
-        _rcInvalid = *prc;
+        _rcInvalid = prc;
         _fInvalidRectUsed = true;
     }
     else
@@ -219,7 +219,7 @@ HRESULT GdiEngine::_InvalidRestrict() noexcept
 // - prc - Pointer to pixel rectangle representing invalid area to add to next paint frame
 // Return Value:
 // - S_OK, GDI related failure, or safemath failure.
-HRESULT GdiEngine::_InvalidateRect(const RECT* const prc) noexcept
+HRESULT GdiEngine::_InvalidateRect(const RECT& prc) noexcept
 {
     RETURN_HR(_InvalidCombine(prc));
 }

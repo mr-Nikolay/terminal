@@ -207,10 +207,10 @@ LRESULT IslandWindow::_OnSizing(const WPARAM wParam, const LPARAM lParam)
 
     const auto nonClientSize = GetTotalNonClientExclusiveSize(dpix);
 
-    auto clientWidth = winRect->right - winRect->left - nonClientSize.cx;
+    auto clientWidth = winRect->right - winRect->left - nonClientSize.width();
     clientWidth = std::max(minWidthScaled, clientWidth);
 
-    auto clientHeight = winRect->bottom - winRect->top - nonClientSize.cy;
+    auto clientHeight = winRect->bottom - winRect->top - nonClientSize.height();
 
     // If we're the quake window, prevent resizing on all sides except the
     // bottom. This also applies to resizing with the Alt+Space menu
@@ -247,12 +247,12 @@ LRESULT IslandWindow::_OnSizing(const WPARAM wParam, const LPARAM lParam)
     case WMSZ_LEFT:
     case WMSZ_TOPLEFT:
     case WMSZ_BOTTOMLEFT:
-        winRect->left = winRect->right - (clientWidth + nonClientSize.cx);
+        winRect->left = winRect->right - (clientWidth + nonClientSize.width());
         break;
     case WMSZ_RIGHT:
     case WMSZ_TOPRIGHT:
     case WMSZ_BOTTOMRIGHT:
-        winRect->right = winRect->left + (clientWidth + nonClientSize.cx);
+        winRect->right = winRect->left + (clientWidth + nonClientSize.width());
         break;
     }
 
@@ -262,12 +262,12 @@ LRESULT IslandWindow::_OnSizing(const WPARAM wParam, const LPARAM lParam)
     case WMSZ_BOTTOM:
     case WMSZ_BOTTOMLEFT:
     case WMSZ_BOTTOMRIGHT:
-        winRect->bottom = winRect->top + (clientHeight + nonClientSize.cy);
+        winRect->bottom = winRect->top + (clientHeight + nonClientSize.height());
         break;
     case WMSZ_TOP:
     case WMSZ_TOPLEFT:
     case WMSZ_TOPRIGHT:
-        winRect->top = winRect->bottom - (clientHeight + nonClientSize.cy);
+        winRect->top = winRect->bottom - (clientHeight + nonClientSize.height());
         break;
     }
 
@@ -386,8 +386,8 @@ void IslandWindow::_OnGetMinMaxInfo(const WPARAM /*wParam*/, const LPARAM lParam
     const auto scale = base::ClampedNumeric<float>(dpix) / USER_DEFAULT_SCREEN_DPI;
 
     auto lpMinMaxInfo = reinterpret_cast<LPMINMAXINFO>(lParam);
-    lpMinMaxInfo->ptMinTrackSize.x = _calculateTotalSize(true, minimumWidth * scale, nonClientSizeScaled.cx);
-    lpMinMaxInfo->ptMinTrackSize.y = _calculateTotalSize(false, minimumHeight * scale, nonClientSizeScaled.cy);
+    lpMinMaxInfo->ptMinTrackSize.x = _calculateTotalSize(true, minimumWidth * scale, nonClientSizeScaled.width());
+    lpMinMaxInfo->ptMinTrackSize.y = _calculateTotalSize(false, minimumHeight * scale, nonClientSizeScaled.height());
 }
 
 // Method Description:
@@ -711,7 +711,7 @@ RECT IslandWindow::GetNonClientFrame(const UINT dpi) const noexcept
 // - dpi: dpi of a monitor on which the window is placed
 // Return Value
 // - The size difference
-SIZE IslandWindow::GetTotalNonClientExclusiveSize(const UINT dpi) const noexcept
+til::size IslandWindow::GetTotalNonClientExclusiveSize(const UINT dpi) const noexcept
 {
     const auto islandFrame{ GetNonClientFrame(dpi) };
     return {

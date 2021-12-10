@@ -38,25 +38,27 @@ constexpr HRESULT vec2_narrow(U x, U y, AtlasEngine::vec2<T>& out) noexcept
 
 #pragma region IRenderEngine
 
-[[nodiscard]] HRESULT AtlasEngine::Invalidate(const SMALL_RECT* const psrRegion) noexcept
+[[nodiscard]] HRESULT AtlasEngine::Invalidate(const til::rect& psrRegion) noexcept
 {
-    //assert(psrRegion->Top < psrRegion->Bottom && psrRegion->Top >= 0 && psrRegion->Bottom <= _api.cellCount.y);
+    // We don't assert that psrRegion->bottom <= _api.cellCount.y, as the
+    // cellCount is only updated in BeginDraw() if we're drawing for a HWND.
+    assert(psrRegion.top < psrRegion.bottom && psrRegion.top >= 0);
 
     // BeginPaint() protects against invalid out of bounds numbers.
-    _api.invalidatedRows.x = std::min(_api.invalidatedRows.x, gsl::narrow_cast<u16>(psrRegion->Top));
-    _api.invalidatedRows.y = std::max(_api.invalidatedRows.y, gsl::narrow_cast<u16>(psrRegion->Bottom));
+    _api.invalidatedRows.x = std::min(_api.invalidatedRows.x, gsl::narrow_cast<u16>(psrRegion.top));
+    _api.invalidatedRows.y = std::max(_api.invalidatedRows.y, gsl::narrow_cast<u16>(psrRegion.bottom));
     return S_OK;
 }
 
-[[nodiscard]] HRESULT AtlasEngine::InvalidateCursor(const SMALL_RECT* const psrRegion) noexcept
+[[nodiscard]] HRESULT AtlasEngine::InvalidateCursor(const til::rect& psrRegion) noexcept
 {
-    //assert(psrRegion->Left <= psrRegion->Right && psrRegion->Left >= 0 && psrRegion->Right <= _api.cellCount.x);
-    //assert(psrRegion->Top <= psrRegion->Bottom && psrRegion->Top >= 0 && psrRegion->Bottom <= _api.cellCount.y);
+    assert(psrRegion.left <= psrRegion.right && psrRegion.left >= 0 && psrRegion.right <= _api.cellCount.x);
+    assert(psrRegion.top <= psrRegion.bottom && psrRegion.top >= 0 && psrRegion.bottom <= _api.cellCount.y);
 
-    const auto left = gsl::narrow_cast<u16>(psrRegion->Left);
-    const auto top = gsl::narrow_cast<u16>(psrRegion->Top);
-    const auto right = gsl::narrow_cast<u16>(psrRegion->Right);
-    const auto bottom = gsl::narrow_cast<u16>(psrRegion->Bottom);
+    const auto left = gsl::narrow_cast<u16>(psrRegion.left);
+    const auto top = gsl::narrow_cast<u16>(psrRegion.top);
+    const auto right = gsl::narrow_cast<u16>(psrRegion.right);
+    const auto bottom = gsl::narrow_cast<u16>(psrRegion.bottom);
 
     // BeginPaint() protects against invalid out of bounds numbers.
     _api.invalidatedCursorArea.left = std::min(_api.invalidatedCursorArea.left, left);
@@ -66,34 +68,32 @@ constexpr HRESULT vec2_narrow(U x, U y, AtlasEngine::vec2<T>& out) noexcept
     return S_OK;
 }
 
-[[nodiscard]] HRESULT AtlasEngine::InvalidateSystem(const RECT* const prcDirtyClient) noexcept
+[[nodiscard]] HRESULT AtlasEngine::InvalidateSystem(const til::rect& prcDirtyClient) noexcept
 {
-    const auto top = prcDirtyClient->top / _api.fontMetrics.cellSize.y;
-    const auto bottom = prcDirtyClient->bottom / _api.fontMetrics.cellSize.y;
-
     // BeginPaint() protects against invalid out of bounds numbers.
-    SMALL_RECT rect;
-    rect.Top = gsl::narrow_cast<SHORT>(top);
-    rect.Bottom = gsl::narrow_cast<SHORT>(bottom);
-    return Invalidate(&rect);
+    til::rect rect;
+    rect.top = prcDirtyClient.top / _api.fontMetrics.cellSize.y;
+    rect.bottom = prcDirtyClient.bottom / _api.fontMetrics.cellSize.y;
+    return Invalidate(rect);
 }
 
-[[nodiscard]] HRESULT AtlasEngine::InvalidateSelection(const std::vector<SMALL_RECT>& rectangles) noexcept
+[[nodiscard]] HRESULT AtlasEngine::InvalidateSelection(const std::vector<til::rect>& rectangles) noexcept
 {
     for (const auto& rect : rectangles)
     {
+        //assert(rect.top <= rect.bottom && rect.top >= 0);
         // BeginPaint() protects against invalid out of bounds numbers.
         // TODO: rect can contain invalid out of bounds coordinates when the selection is being
         // dragged outside of the viewport (and the window begins scrolling automatically).
-        _api.invalidatedRows.x = gsl::narrow_cast<u16>(std::min<int>(_api.invalidatedRows.x, std::max<int>(0, rect.Top)));
-        _api.invalidatedRows.y = gsl::narrow_cast<u16>(std::max<int>(_api.invalidatedRows.y, std::max<int>(0, rect.Bottom)));
+        _api.invalidatedRows.x = gsl::narrow_cast<u16>(std::min<int>(_api.invalidatedRows.x, std::max<int>(0, rect.top)));
+        _api.invalidatedRows.y = gsl::narrow_cast<u16>(std::max<int>(_api.invalidatedRows.y, std::max<int>(0, rect.bottom)));
     }
     return S_OK;
 }
 
-[[nodiscard]] HRESULT AtlasEngine::InvalidateScroll(const COORD* const pcoordDelta) noexcept
+[[nodiscard]] HRESULT AtlasEngine::InvalidateScroll(til::point pcoordDelta) noexcept
 {
-    const auto delta = pcoordDelta->Y;
+    const auto delta = pcoordDelta.y;
     if (delta == 0)
     {
         return S_OK;
@@ -146,7 +146,7 @@ constexpr HRESULT vec2_narrow(U x, U y, AtlasEngine::vec2<T>& out) noexcept
     return UpdateFont(fontInfoDesired, fontInfo, {}, {});
 }
 
-[[nodiscard]] HRESULT AtlasEngine::UpdateSoftFont(const gsl::span<const uint16_t> bitPattern, const SIZE cellSize, const size_t centeringHint) noexcept
+[[nodiscard]] HRESULT AtlasEngine::UpdateSoftFont(const gsl::span<const uint16_t> bitPattern, const til::size cellSize, const size_t centeringHint) noexcept
 {
     return S_OK;
 }
@@ -165,7 +165,7 @@ constexpr HRESULT vec2_narrow(U x, U y, AtlasEngine::vec2<T>& out) noexcept
     return S_OK;
 }
 
-[[nodiscard]] HRESULT AtlasEngine::UpdateViewport(const SMALL_RECT srNewViewport) noexcept
+[[nodiscard]] HRESULT AtlasEngine::UpdateViewport(const til::inclusive_rect srNewViewport) noexcept
 {
     return S_OK;
 }
@@ -190,7 +190,7 @@ try
         // https://msdn.microsoft.com/en-us/library/ms969909.aspx
 
         LOGFONTW lf;
-        lf.lfHeight = -MulDiv(requestedSize.Y, dpi, 72);
+        lf.lfHeight = -MulDiv(requestedSize.y, dpi, 72);
         lf.lfWidth = 0;
         lf.lfEscapement = 0;
         lf.lfOrientation = 0;
@@ -222,8 +222,8 @@ try
 
         SIZE sz;
         RETURN_HR_IF(E_FAIL, !GetTextExtentPoint32W(hdc.get(), L"M", 1, &sz));
-        resultingCellSize.X = gsl::narrow<SHORT>(sz.cx);
-        resultingCellSize.Y = gsl::narrow<SHORT>(sz.cy);
+        resultingCellSize.x = sz.cx;
+        resultingCellSize.y = sz.cy;
     }
 #endif
 
@@ -238,11 +238,10 @@ CATCH_RETURN()
     return S_OK;
 }
 
-[[nodiscard]] HRESULT AtlasEngine::GetFontSize(_Out_ COORD* const pFontSize) noexcept
+[[nodiscard]] HRESULT AtlasEngine::GetFontSize(_Out_ til::size& pFontSize) noexcept
 {
-    RETURN_HR_IF_NULL(E_INVALIDARG, pFontSize);
-    pFontSize->X = gsl::narrow_cast<SHORT>(_api.fontMetrics.cellSize.x);
-    pFontSize->Y = gsl::narrow_cast<SHORT>(_api.fontMetrics.cellSize.y);
+    pFontSize.width = _api.fontMetrics.cellSize.x;
+    pFontSize.height = _api.fontMetrics.cellSize.y;
     return S_OK;
 }
 
@@ -299,14 +298,14 @@ HRESULT AtlasEngine::Enable() noexcept
 {
     assert(_api.fontMetrics.cellSize.x != 0);
     assert(_api.fontMetrics.cellSize.y != 0);
-    return Types::Viewport::FromDimensions(viewInPixels.Origin(), COORD{ gsl::narrow_cast<short>(viewInPixels.Width() / _api.fontMetrics.cellSize.x), gsl::narrow_cast<short>(viewInPixels.Height() / _api.fontMetrics.cellSize.y) });
+    return Types::Viewport::FromDimensions(viewInPixels.Origin(), til::size{ viewInPixels.Width() / _api.fontMetrics.cellSize.x, viewInPixels.Height() / _api.fontMetrics.cellSize.y });
 }
 
 [[nodiscard]] Microsoft::Console::Types::Viewport AtlasEngine::GetViewportInPixels(const Types::Viewport& viewInCharacters) const noexcept
 {
     assert(_api.fontMetrics.cellSize.x != 0);
     assert(_api.fontMetrics.cellSize.y != 0);
-    return Types::Viewport::FromDimensions(viewInCharacters.Origin(), COORD{ gsl::narrow_cast<short>(viewInCharacters.Width() * _api.fontMetrics.cellSize.x), gsl::narrow_cast<short>(viewInCharacters.Height() * _api.fontMetrics.cellSize.y) });
+    return Types::Viewport::FromDimensions(viewInCharacters.Origin(), til::size{ viewInCharacters.Width() * _api.fontMetrics.cellSize.x, viewInCharacters.Height() * _api.fontMetrics.cellSize.y });
 }
 
 void AtlasEngine::SetAntialiasingMode(const D2D1_TEXT_ANTIALIAS_MODE antialiasingMode) noexcept
@@ -379,10 +378,10 @@ void AtlasEngine::SetWarningCallback(std::function<void(HRESULT)> pfn) noexcept
     _api.warningCallback = std::move(pfn);
 }
 
-[[nodiscard]] HRESULT AtlasEngine::SetWindowSize(const SIZE pixels) noexcept
+[[nodiscard]] HRESULT AtlasEngine::SetWindowSize(til::size pixels) noexcept
 {
     u16x2 newSize;
-    RETURN_IF_FAILED(vec2_narrow(pixels.cx, pixels.cy, newSize));
+    RETURN_IF_FAILED(vec2_narrow(pixels.width, pixels.height, newSize));
 
     // At the time of writing:
     // When Win+D is pressed, `TriggerRedrawCursor` is called and a render pass is initiated.
@@ -513,7 +512,7 @@ void AtlasEngine::_resolveFontMetrics(const FontInfoDesired& fontInfoDesired, Fo
     {
         requestedFaceName = L"Consolas";
     }
-    if (!requestedSize.Y)
+    if (requestedSize.height <= 0)
     {
         requestedSize = { 0, 12 };
     }
@@ -557,7 +556,7 @@ void AtlasEngine::_resolveFontMetrics(const FontInfoDesired& fontInfoDesired, Fo
     // Point sizes are commonly treated at a 72 DPI scale
     // (including by OpenType), whereas DirectWrite uses 96 DPI.
     // Since we want the height in px we multiply by the display's DPI.
-    const auto fontSizeInPx = std::ceil(requestedSize.Y / 72.0 * _api.dpi);
+    const auto fontSizeInPx = std::ceil(gsl::narrow_cast<unsigned int>(requestedSize.height) / 72.0 * _api.dpi);
 
     const auto designUnitsPerPx = fontSizeInPx / static_cast<double>(metrics.designUnitsPerEm);
     const auto ascentInPx = static_cast<double>(metrics.ascent) * designUnitsPerPx;
@@ -571,9 +570,9 @@ void AtlasEngine::_resolveFontMetrics(const FontInfoDesired& fontInfoDesired, Fo
     const auto cellHeight = gsl::narrow<u16>(std::ceil(baseline + descentInPx + halfGapInPx));
 
     {
-        COORD resultingCellSize;
-        resultingCellSize.X = gsl::narrow<SHORT>(cellWidth);
-        resultingCellSize.Y = gsl::narrow<SHORT>(cellHeight);
+        til::size resultingCellSize;
+        resultingCellSize.width = cellWidth;
+        resultingCellSize.height = cellHeight;
         fontInfo.SetFromEngine(requestedFaceName, requestedFamily, requestedWeight, false, resultingCellSize, requestedSize);
     }
 

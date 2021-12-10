@@ -101,7 +101,7 @@ WddmConEngine::~WddmConEngine()
                             break;
                         }
 
-                        _displayState[i]->Index = (SHORT)i;
+                        _displayState[i]->Index = i;
                         _displayState[i]->Old = (PCD_IO_CHARACTER)calloc(DisplaySize.right, sizeof(CD_IO_CHARACTER));
                         _displayState[i]->New = (PCD_IO_CHARACTER)calloc(DisplaySize.right, sizeof(CD_IO_CHARACTER));
 
@@ -161,27 +161,27 @@ bool WddmConEngine::IsInitialized()
     return WDDMConEnableDisplayAccess((PHANDLE)_hWddmConCtx, FALSE);
 }
 
-[[nodiscard]] HRESULT WddmConEngine::Invalidate(const SMALL_RECT* const /*psrRegion*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::Invalidate(const til::inclusive_rect /*psrRegion*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::InvalidateCursor(const SMALL_RECT* const /*psrRegion*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::InvalidateCursor(const til::inclusive_rect /*psrRegion*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::InvalidateSystem(const RECT* const /*prcDirtyClient*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::InvalidateSystem(const til::rect& /*prcDirtyClient*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::InvalidateSelection(const std::vector<SMALL_RECT>& /*rectangles*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::InvalidateSelection(const std::vector<til::inclusive_rect>& /*rectangles*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::InvalidateScroll(const COORD* const /*pcoordDelta*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::InvalidateScroll(til::point /*pcoordDelta*/) noexcept
 {
     return S_OK;
 }
@@ -259,7 +259,7 @@ bool WddmConEngine::IsInitialized()
 }
 
 [[nodiscard]] HRESULT WddmConEngine::PaintBufferLine(gsl::span<const Cluster> const clusters,
-                                                     const COORD coord,
+                                                     const til::point coord,
                                                      const bool /*trimLeft*/,
                                                      const bool /*lineWrapped*/) noexcept
 {
@@ -272,8 +272,8 @@ bool WddmConEngine::IsInitialized()
 
         for (size_t i = 0; i < clusters.size() && i < (size_t)_displayWidth; i++)
         {
-            OldChar = &_displayState[coord.Y]->Old[coord.X + i];
-            NewChar = &_displayState[coord.Y]->New[coord.X + i];
+            OldChar = &_displayState[coord.y]->Old[coord.x + i];
+            NewChar = &_displayState[coord.y]->New[coord.x + i];
 
             OldChar->Character = NewChar->Character;
             OldChar->Attribute = NewChar->Attribute;
@@ -282,7 +282,7 @@ bool WddmConEngine::IsInitialized()
             NewChar->Attribute = _currentLegacyColorAttribute;
         }
 
-        return WDDMConUpdateDisplay(_hWddmConCtx, _displayState[coord.Y], FALSE);
+        return WDDMConUpdateDisplay(_hWddmConCtx, _displayState[coord.y], FALSE);
     }
     CATCH_RETURN();
 }
@@ -290,12 +290,12 @@ bool WddmConEngine::IsInitialized()
 [[nodiscard]] HRESULT WddmConEngine::PaintBufferGridLines(GridLineSet const /*lines*/,
                                                           COLORREF const /*color*/,
                                                           size_t const /*cchLine*/,
-                                                          COORD const /*coordTarget*/) noexcept
+                                                          til::point /*coordTarget*/) noexcept
 {
     return S_OK;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::PaintSelection(const SMALL_RECT /*rect*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::PaintSelection(const til::rect& /*rect*/) noexcept
 {
     return S_OK;
 }
@@ -332,7 +332,7 @@ bool WddmConEngine::IsInitialized()
 // - srNewViewport - The bounds of the new viewport.
 // Return Value:
 // - HRESULT S_OK
-[[nodiscard]] HRESULT WddmConEngine::UpdateViewport(const SMALL_RECT /*srNewViewport*/) noexcept
+[[nodiscard]] HRESULT WddmConEngine::UpdateViewport(const til::inclusive_rect /*srNewViewport*/) noexcept
 {
     return S_OK;
 }
@@ -341,7 +341,7 @@ bool WddmConEngine::IsInitialized()
                                                      FontInfo& fiFontInfo,
                                                      int const /*iDpi*/) noexcept
 {
-    COORD coordSize = { 0 };
+    til::point coordSize;
     LOG_IF_FAILED(GetFontSize(&coordSize));
 
     fiFontInfo.SetFromEngine(fiFontInfo.GetFaceName(),
@@ -356,11 +356,11 @@ bool WddmConEngine::IsInitialized()
 
 [[nodiscard]] HRESULT WddmConEngine::GetDirtyArea(gsl::span<const til::rect>& area) noexcept
 {
-    SMALL_RECT r;
-    r.Bottom = _displayHeight > 0 ? (SHORT)(_displayHeight - 1) : 0;
-    r.Top = 0;
-    r.Left = 0;
-    r.Right = _displayWidth > 0 ? (SHORT)(_displayWidth - 1) : 0;
+    til::inclusive_rect r;
+    r.bottom = _displayHeight > 0 ? (_displayHeight - 1) : 0;
+    r.top = 0;
+    r.left = 0;
+    r.right = _displayWidth > 0 ? (_displayWidth - 1) : 0;
 
     _dirtyArea = r;
 
@@ -381,7 +381,7 @@ RECT WddmConEngine::GetDisplaySize()
     return r;
 }
 
-[[nodiscard]] HRESULT WddmConEngine::GetFontSize(_Out_ COORD* const pFontSize) noexcept
+[[nodiscard]] HRESULT WddmConEngine::GetFontSize(_Out_ til::size& pFontSize) noexcept
 {
     // In order to retrieve the font size being used by DirectX, it is necessary
     // to modify the API set that defines the contract for WddmCon. However, the
@@ -394,9 +394,9 @@ RECT WddmConEngine::GetDisplaySize()
     //
     // TODO: MSFT 11851921 - Subsume WddmCon into ConhostV2 and remove the API
     //       set extension.
-    COORD c;
-    c.X = DEFAULT_FONT_WIDTH;
-    c.Y = DEFAULT_FONT_HEIGHT;
+    til::point c;
+    c.x = DEFAULT_FONT_WIDTH;
+    c.y = DEFAULT_FONT_HEIGHT;
 
     *pFontSize = c;
     return S_OK;

@@ -169,7 +169,7 @@ class FillOutputTests
         bufferText = std::make_unique<wchar_t[]>(2);
         VERIFY_WIN32_BOOL_SUCCEEDED(ReadConsoleOutputCharacterW(hConsole,
                                                                 bufferText.get(),
-                                                                static_cast<SHORT>(2),
+                                                                2,
                                                                 { 0, 0 },
                                                                 &readSize));
 
@@ -187,7 +187,7 @@ class FillOutputTests
         bufferText = std::make_unique<wchar_t[]>(consoleWidth - 2);
         VERIFY_WIN32_BOOL_SUCCEEDED(ReadConsoleOutputCharacterW(hConsole,
                                                                 bufferText.get(),
-                                                                consoleWidth - static_cast<SHORT>(2),
+                                                                consoleWidth - 2,
                                                                 { 0, 0 },
                                                                 &readSize));
 
@@ -200,10 +200,10 @@ class FillOutputTests
         VERIFY_ARE_EQUAL(expected, actual);
 
         // Verify second line is still has 'a's ('b's didn't wrap over)
-        bufferText = std::make_unique<wchar_t[]>(static_cast<SHORT>(2));
+        bufferText = std::make_unique<wchar_t[]>(2);
         VERIFY_WIN32_BOOL_SUCCEEDED(ReadConsoleOutputCharacterW(hConsole,
                                                                 bufferText.get(),
-                                                                static_cast<SHORT>(2),
+                                                                2,
                                                                 { 0, 0 },
                                                                 &readSize));
 

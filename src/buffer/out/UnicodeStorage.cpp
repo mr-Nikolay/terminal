@@ -47,7 +47,7 @@ void UnicodeStorage::Erase(const key_type key) noexcept
 // - rowMap - A map of the old row IDs to the new row IDs.
 // - width - The width of the new row. Remove any items that are beyond the row width.
 //         - Use nullopt if we're not resizing the width of the row, just renumbering the rows.
-void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const std::optional<SHORT> width)
+void UnicodeStorage::Remap(const std::unordered_map<til::CoordType, til::CoordType>& rowMap, const std::optional<til::CoordType> width)
 {
     // Make a temporary map to hold all the new row positioning
     std::unordered_map<key_type, mapped_type> newMap;
@@ -63,7 +63,7 @@ void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const
         if (width.has_value())
         {
             // Get the column ID
-            const auto oldColId = oldCoord.X;
+            const auto oldColId = oldCoord.x;
 
             // If the column index is at/beyond the row width, don't bother copying it to the new map.
             if (oldColId >= width.value())
@@ -73,7 +73,7 @@ void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const
         }
 
         // Get the row ID from the position as that's what we need to remap
-        const auto oldRowId = oldCoord.Y;
+        const auto oldRowId = oldCoord.y;
 
         // Use the mapping given to convert the old row ID to the new row ID
         const auto mapIter = rowMap.find(oldRowId);
@@ -87,7 +87,7 @@ void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const
         const auto newRowId = mapIter->second;
 
         // Generate a new coordinate with the same X as the old one, but a new Y value.
-        const auto newCoord = COORD{ oldCoord.X, newRowId };
+        const auto newCoord = til::point{ oldCoord.x, newRowId };
 
         // Put the adjusted coordinate into the map with the original value.
         newMap.emplace(newCoord, pair.second);

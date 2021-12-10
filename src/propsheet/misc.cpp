@@ -178,8 +178,8 @@ void RecreateFontHandles(const HWND hWnd)
             if (TM_IS_TT_FONT(FontInfo[iCurrFont].Family))
             {
                 LOGFONT lf = { 0 };
-                lf.lfWidth = GetDPIXScaledPixelSize(hWnd, FontInfo[iCurrFont].Size.X);
-                lf.lfHeight = GetDPIYScaledPixelSize(hWnd, FontInfo[iCurrFont].Size.Y);
+                lf.lfWidth = GetDPIXScaledPixelSize(hWnd, FontInfo[iCurrFont].Size.x);
+                lf.lfHeight = GetDPIYScaledPixelSize(hWnd, FontInfo[iCurrFont].Size.y);
                 lf.lfWeight = FontInfo[iCurrFont].Weight;
                 lf.lfCharSet = FontInfo[iCurrFont].tmCharSet;
 
@@ -214,19 +214,19 @@ int AddFont(
     HFONT hFont;
     TEXTMETRIC tm;
     ULONG nFont;
-    COORD SizeToShow, SizeActual, SizeWant, SizeOriginal;
+    til::point SizeToShow, SizeActual, SizeWant, SizeOriginal;
     BYTE tmFamily;
     SIZE Size;
     BOOL fCreatingBoldFont = FALSE;
     LPTSTR ptszFace = pelf->elfLogFont.lfFaceName;
 
     /* get font info */
-    SizeWant.X = (SHORT)pelf->elfLogFont.lfWidth;
-    SizeWant.Y = (SHORT)pelf->elfLogFont.lfHeight;
+    SizeWant.x = pelf->elfLogFont.lfWidth;
+    SizeWant.y = pelf->elfLogFont.lfHeight;
 
     /* save original size request so that we can use it unmodified when doing DPI calculations */
-    SizeOriginal.X = (SHORT)pelf->elfLogFont.lfWidth;
-    SizeOriginal.Y = (SHORT)pelf->elfLogFont.lfHeight;
+    SizeOriginal.x = pelf->elfLogFont.lfWidth;
+    SizeOriginal.y = pelf->elfLogFont.lfHeight;
 
 CreateBoldFont:
     pelf->elfLogFont.lfQuality = DEFAULT_QUALITY;
@@ -243,18 +243,18 @@ CreateBoldFont:
     GetTextMetrics(hDC, &tm);
 
     GetTextExtentPoint32(hDC, TEXT("0"), 1, &Size);
-    SizeActual.X = (SHORT)Size.cx;
-    SizeActual.Y = (SHORT)(tm.tmHeight + tm.tmExternalLeading);
-    DBGFONTS2(("    actual size %d,%d\n", SizeActual.X, SizeActual.Y));
+    SizeActual.x = Size.cx;
+    SizeActual.y = (tm.tmHeight + tm.tmExternalLeading);
+    DBGFONTS2(("    actual size %d,%d\n", SizeActual.x, SizeActual.y));
     tmFamily = tm.tmPitchAndFamily;
-    if (TM_IS_TT_FONT(tmFamily) && (SizeWant.Y >= 0))
+    if (TM_IS_TT_FONT(tmFamily) && (SizeWant.y >= 0))
     {
         SizeToShow = SizeWant;
-        if (SizeWant.X == 0)
+        if (SizeWant.x == 0)
         {
             // Asking for zero width height gets a default aspect-ratio width.
             // It's better to show that width rather than 0.
-            SizeToShow.X = SizeActual.X;
+            SizeToShow.x = SizeActual.x;
         }
     }
     else
@@ -263,10 +263,10 @@ CreateBoldFont:
     }
 
     DBGFONTS2(("    SizeToShow = (%d,%d), SizeActual = (%d,%d)\n",
-               SizeToShow.X,
-               SizeToShow.Y,
-               SizeActual.X,
-               SizeActual.Y));
+               SizeToShow.x,
+               SizeToShow.y,
+               SizeActual.x,
+               SizeActual.y));
 
     /*
      * NOW, determine whether this font entry has already been cached
@@ -279,7 +279,7 @@ CreateBoldFont:
      */
     for (nFont = 0; nFont < NumberOfFonts; ++nFont)
     {
-        COORD SizeShown;
+        til::point SizeShown;
 
         if (FontInfo[nFont].hFont == nullptr)
         {
@@ -287,33 +287,33 @@ CreateBoldFont:
             continue;
         }
 
-        if (FontInfo[nFont].SizeWant.X > 0)
+        if (FontInfo[nFont].SizeWant.x > 0)
         {
-            SizeShown.X = FontInfo[nFont].SizeWant.X;
+            SizeShown.x = FontInfo[nFont].SizeWant.x;
         }
         else
         {
-            SizeShown.X = FontInfo[nFont].Size.X;
+            SizeShown.x = FontInfo[nFont].Size.x;
         }
 
-        if (FontInfo[nFont].SizeWant.Y > 0)
+        if (FontInfo[nFont].SizeWant.y > 0)
         {
             // This is a font specified by cell height.
-            SizeShown.Y = FontInfo[nFont].SizeWant.Y;
+            SizeShown.y = FontInfo[nFont].SizeWant.y;
         }
         else
         {
-            SizeShown.Y = FontInfo[nFont].Size.Y;
-            if (FontInfo[nFont].SizeWant.Y < 0)
+            SizeShown.y = FontInfo[nFont].Size.y;
+            if (FontInfo[nFont].SizeWant.y < 0)
             {
                 // This is a TT font specified by character height.
-                if (SizeWant.Y < 0 && SizeWant.Y > FontInfo[nFont].SizeWant.Y)
+                if (SizeWant.y < 0 && SizeWant.y > FontInfo[nFont].SizeWant.y)
                 {
                     // Requested pixelheight is smaller than this one.
                     DBGFONTS(("INSERT %d pt at %x, before %d pt\n",
-                              -SizeWant.Y,
+                              -SizeWant.y,
                               nFont,
-                              -FontInfo[nFont].SizeWant.Y));
+                              -FontInfo[nFont].SizeWant.y));
                     break;
                 }
             }
@@ -322,7 +322,7 @@ CreateBoldFont:
         // Note that we're relying on pntm->tmWeight below because some fonts (e.g. Iosevka Extralight) show up as bold
         // via GetTextMetrics. pntm->tmWeight doesn't have this issue. However, on the second pass through (see
         // :CreateBoldFont) we should use what's in tm.tmWeight
-        if (SIZE_EQUAL(SizeShown, SizeToShow) &&
+        if (SizeShown == SizeToShow &&
             FontInfo[nFont].Family == tmFamily &&
             FontInfo[nFont].Weight == ((fCreatingBoldFont) ? tm.tmWeight : pntm->tmWeight) &&
             0 == lstrcmp(FontInfo[nFont].FaceName, ptszFace))
@@ -335,13 +335,13 @@ CreateBoldFont:
             return FE_FONTOK;
         }
 
-        if ((SizeToShow.Y < SizeShown.Y) ||
-            (SizeToShow.Y == SizeShown.Y && SizeToShow.X < SizeShown.X))
+        if ((SizeToShow.y < SizeShown.y) ||
+            (SizeToShow.y == SizeShown.y && SizeToShow.x < SizeShown.x))
         {
             /*
              * This new font is smaller than nFont
              */
-            DBGFONTS(("INSERT at %x, SizeToShow = (%d,%d)\n", nFont, SizeToShow.X, SizeToShow.Y));
+            DBGFONTS(("INSERT at %x, SizeToShow = (%d,%d)\n", nFont, SizeToShow.x, SizeToShow.y));
             break;
         }
     }
@@ -388,8 +388,8 @@ CreateBoldFont:
     if (nFontType == TRUETYPE_FONTTYPE && gpStateInfo->fIsV2Console)
     {
         DeleteObject(hFont);
-        pelf->elfLogFont.lfWidth = GetDPIXScaledPixelSize(gpStateInfo->hWnd, SizeOriginal.X);
-        pelf->elfLogFont.lfHeight = GetDPIYScaledPixelSize(gpStateInfo->hWnd, SizeOriginal.Y);
+        pelf->elfLogFont.lfWidth = GetDPIXScaledPixelSize(gpStateInfo->hWnd, SizeOriginal.x);
+        pelf->elfLogFont.lfHeight = GetDPIYScaledPixelSize(gpStateInfo->hWnd, SizeOriginal.y);
         hFont = CreateFontIndirect(&pelf->elfLogFont);
         if (!hFont)
         {
@@ -409,8 +409,8 @@ CreateBoldFont:
     }
     else
     {
-        FontInfo[nFont].SizeWant.X = 0;
-        FontInfo[nFont].SizeWant.Y = 0;
+        FontInfo[nFont].SizeWant.x = 0;
+        FontInfo[nFont].SizeWant.y = 0;
     }
 
     FontInfo[nFont].Weight = tm.tmWeight;
@@ -426,8 +426,8 @@ CreateBoldFont:
     if (nFontType == TRUETYPE_FONTTYPE && !IS_BOLD(FontInfo[nFont].Weight))
     {
         pelf->elfLogFont.lfWeight = FW_BOLD;
-        pelf->elfLogFont.lfWidth = SizeOriginal.X;
-        pelf->elfLogFont.lfHeight = SizeOriginal.Y;
+        pelf->elfLogFont.lfWidth = SizeOriginal.x;
+        pelf->elfLogFont.lfHeight = SizeOriginal.y;
         fCreatingBoldFont = TRUE;
         goto CreateBoldFont;
     }
@@ -963,16 +963,16 @@ EnumerateFonts(
         GetTextMetrics(hDC, &tm);
         GetTextFace(hDC, LF_FACESIZE, DefaultFaceName);
 
-        DefaultFontSize.X = (SHORT)(tm.tmMaxCharWidth);
-        DefaultFontSize.Y = (SHORT)(tm.tmHeight + tm.tmExternalLeading);
+        DefaultFontSize.x = (tm.tmMaxCharWidth);
+        DefaultFontSize.y = (tm.tmHeight + tm.tmExternalLeading);
         DefaultFontFamily = tm.tmPitchAndFamily;
 
         if (IS_ANY_DBCS_CHARSET(tm.tmCharSet))
         {
-            DefaultFontSize.X /= 2;
+            DefaultFontSize.x /= 2;
         }
 
-        DBGFONTS(("Default (OEM) Font %ls (%d,%d) CharSet 0x%02X\n", DefaultFaceName, DefaultFontSize.X, DefaultFontSize.Y, tm.tmCharSet));
+        DBGFONTS(("Default (OEM) Font %ls (%d,%d) CharSet 0x%02X\n", DefaultFaceName, DefaultFontSize.x, DefaultFontSize.y, tm.tmCharSet));
 
         // Make sure we are going to enumerate the OEM face.
         pFN = AddFaceNode(DefaultFaceName);
@@ -1055,8 +1055,8 @@ EnumerateFonts(
     {
         for (FontIndex = 0; FontIndex < NumberOfFonts; FontIndex++)
         {
-            if (FontInfo[FontIndex].Size.X == DefaultFontSize.X &&
-                FontInfo[FontIndex].Size.Y == DefaultFontSize.Y &&
+            if (FontInfo[FontIndex].Size.x == DefaultFontSize.x &&
+                FontInfo[FontIndex].Size.y == DefaultFontSize.y &&
                 IS_DBCS_OR_OEM_CHARSET(FontInfo[FontIndex].tmCharSet) &&
                 FontInfo[FontIndex].Family == DefaultFontFamily)
             {
@@ -1068,8 +1068,8 @@ EnumerateFonts(
     {
         for (FontIndex = 0; FontIndex < NumberOfFonts; FontIndex++)
         {
-            if (FontInfo[FontIndex].Size.X == DefaultFontSize.X &&
-                FontInfo[FontIndex].Size.Y == DefaultFontSize.Y &&
+            if (FontInfo[FontIndex].Size.x == DefaultFontSize.x &&
+                FontInfo[FontIndex].Size.y == DefaultFontSize.y &&
                 FontInfo[FontIndex].Family == DefaultFontFamily)
             {
                 break;

@@ -41,7 +41,7 @@ void CommandNumberPopup::_handleNumber(COOKED_READ_DATA& cookedReadData, const w
                                                       &wch,
                                                       &CharsToWrite,
                                                       &NumSpaces,
-                                                      cookedReadData.OriginalCursorPosition().X,
+                                                      cookedReadData.OriginalCursorPosition().x,
                                                       WC_DESTRUCTIVE_BACKSPACE | WC_KEEP_CURSOR_VISIBLE | WC_PRINTABLE_CONTROL_CHARS,
                                                       nullptr));
         cookedReadData.ScreenInfo().SetAttributes(realAttributes);
@@ -72,7 +72,7 @@ void CommandNumberPopup::_handleBackspace(COOKED_READ_DATA& cookedReadData) noex
                                                       &backspace,
                                                       &CharsToWrite,
                                                       &NumSpaces,
-                                                      cookedReadData.OriginalCursorPosition().X,
+                                                      cookedReadData.OriginalCursorPosition().x,
                                                       WC_DESTRUCTIVE_BACKSPACE | WC_KEEP_CURSOR_VISIBLE | WC_PRINTABLE_CONTROL_CHARS,
                                                       nullptr));
         cookedReadData.ScreenInfo().SetAttributes(realAttributes);
@@ -101,8 +101,7 @@ void CommandNumberPopup::_handleEscape(COOKED_READ_DATA& cookedReadData) noexcep
 // - cookedReadData - read data to operate on
 void CommandNumberPopup::_handleReturn(COOKED_READ_DATA& cookedReadData) noexcept
 {
-    const short commandNumber = gsl::narrow<short>(std::min(static_cast<size_t>(_parse()),
-                                                            cookedReadData.History().GetNumberOfCommands() - 1));
+    const auto commandNumber = std::min(_parse(), cookedReadData.History().GetNumberOfCommands() - 1);
 
     CommandLine::Instance().EndAllPopups();
     SetCurrentCommandLine(cookedReadData, commandNumber);

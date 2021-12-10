@@ -24,8 +24,8 @@ public:
     static CommandHistory* s_FindByExe(const std::wstring_view appName);
     static void s_ReallocExeToFront(const std::wstring_view appName, const size_t commands);
     static void s_Free(const HANDLE processHandle);
-    static void s_ResizeAll(const size_t commands);
-    static size_t s_CountOfHistories();
+    static void s_ResizeAll(const int commands);
+    static int s_CountOfHistories();
 
     enum class MatchOptions
     {
@@ -41,8 +41,8 @@ public:
     };
 
     bool FindMatchingCommand(const std::wstring_view command,
-                             const SHORT startingIndex,
-                             SHORT& indexFound,
+                             const int startingIndex,
+                             int& indexFound,
                              const MatchOptions options);
     bool IsAppNameMatch(const std::wstring_view other) const;
 
@@ -53,24 +53,25 @@ public:
                                    const gsl::span<wchar_t> buffer,
                                    size_t& commandSize);
 
-    [[nodiscard]] HRESULT RetrieveNth(const SHORT index,
+    [[nodiscard]] HRESULT RetrieveNth(const int index,
                                       const gsl::span<wchar_t> buffer,
                                       size_t& commandSize);
 
-    size_t GetNumberOfCommands() const;
-    std::wstring_view GetNth(const SHORT index) const;
+    const std::vector<std::wstring>& GetCommands() const noexcept;
+    int GetNumberOfCommands() const noexcept;
+    std::wstring_view GetNth(const int index) const noexcept;
 
     void Realloc(const size_t commands);
     void Empty();
 
-    std::wstring Remove(const SHORT iDel);
+    std::wstring Remove(const int iDel);
 
     bool AtFirstCommand() const;
     bool AtLastCommand() const;
 
     std::wstring_view GetLastCommand() const;
 
-    void Swap(const short indexA, const short indexB);
+    void Swap(const int indexA, const int indexB);
 
 private:
     void _Reset();
@@ -78,13 +79,13 @@ private:
     // _Next and _Prev go to the next and prev command
     // _Inc  and _Dec go to the next and prev slots
     // Don't get the two confused - it matters when the cmd history is not full!
-    void _Prev(SHORT& ind) const;
-    void _Next(SHORT& ind) const;
-    void _Dec(SHORT& ind) const;
-    void _Inc(SHORT& ind) const;
+    void _Prev(int& ind) const;
+    void _Next(int& ind) const;
+    void _Dec(int& ind) const;
+    void _Inc(int& ind) const;
 
     std::vector<std::wstring> _commands;
-    SHORT _maxCommands;
+    int _maxCommands;
 
     std::wstring _appName;
     HANDLE _processHandle;
@@ -93,7 +94,7 @@ private:
 
 public:
     DWORD Flags;
-    SHORT LastDisplayed;
+    int LastDisplayed;
 
 #ifdef UNIT_TESTING
     static void s_ClearHistoryListStorage();

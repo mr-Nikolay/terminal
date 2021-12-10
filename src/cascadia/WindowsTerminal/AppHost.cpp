@@ -524,8 +524,8 @@ void AppHost::_HandleCreateWindow(const HWND hwnd, RECT proposedRect, LaunchMode
 
     // Get the size of a window we'd need to host that client rect. This will
     // add the titlebar space.
-    const til::size nonClientSize{ _window->GetTotalNonClientExclusiveSize(dpix) };
-    const til::rect nonClientFrame{ _window->GetNonClientFrame(dpix) };
+    const auto nonClientSize = _window->GetTotalNonClientExclusiveSize(dpix);
+    const auto nonClientFrame = _window->GetNonClientFrame(dpix);
     adjustedWidth = islandWidth + nonClientSize.width;
     adjustedHeight = islandHeight + nonClientSize.height;
 
@@ -538,16 +538,16 @@ void AppHost::_HandleCreateWindow(const HWND hwnd, RECT proposedRect, LaunchMode
     nearestMonitorInfo.cbSize = sizeof(MONITORINFO);
     // Get monitor dimensions:
     GetMonitorInfo(hMonNearest, &nearestMonitorInfo);
-    const til::size desktopDimensions{ gsl::narrow<short>(nearestMonitorInfo.rcWork.right - nearestMonitorInfo.rcWork.left),
-                                       gsl::narrow<short>(nearestMonitorInfo.rcWork.bottom - nearestMonitorInfo.rcWork.top) };
+    const til::size desktopDimensions{ nearestMonitorInfo.rcWork.right - nearestMonitorInfo.rcWork.left,
+                                       nearestMonitorInfo.rcWork.bottom - nearestMonitorInfo.rcWork.top };
 
     // GH#10583 - Adjust the position of the rectangle to account for the size
     // of the invisible borders on the left/right. We DON'T want to adjust this
     // for the top here - the IslandWindow includes the titlebar in
     // nonClientFrame.top, so adjusting for that would actually place the
     // titlebar _off_ the monitor.
-    til::point origin{ (proposedRect.left + nonClientFrame.narrow_left<LONG>()),
-                       (proposedRect.top) };
+    til::point origin{ proposedRect.left + nonClientFrame.left,
+                       proposedRect.top };
 
     if (_logic.IsQuakeWindow())
     {
@@ -687,7 +687,7 @@ void AppHost::_WindowMouseWheeled(const til::point coord, const int32_t delta)
                     const auto transform = e.TransformToVisual(nullptr);
                     const til::point controlOrigin{ til::math::flooring, transform.TransformPoint({}) };
 
-                    const til::point offsetPoint = coord - controlOrigin;
+                    const auto offsetPoint = coord - controlOrigin;
 
                     const auto lButtonDown = WI_IsFlagSet(GetKeyState(VK_LBUTTON), KeyPressed);
                     const auto mButtonDown = WI_IsFlagSet(GetKeyState(VK_MBUTTON), KeyPressed);

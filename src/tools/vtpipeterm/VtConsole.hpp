@@ -25,7 +25,7 @@ typedef void (*PipeReadCallback)(BYTE* buffer, DWORD dwRead);
 class VtConsole
 {
 public:
-    VtConsole(PipeReadCallback const pfnReadCallback, bool const fHeadless, bool const fUseConpty, COORD const initialSize);
+    VtConsole(PipeReadCallback const pfnReadCallback, bool const fHeadless, bool const fUseConpty, til::point initialSize);
     void spawn();
     void spawn(const std::wstring& command);
 
@@ -51,7 +51,7 @@ public:
     bool Resize(const unsigned short rows, const unsigned short cols);
 
 private:
-    COORD _lastDimensions;
+    til::point _lastDimensions;
 
     PROCESS_INFORMATION _piPty;
     PROCESS_INFORMATION _piClient;

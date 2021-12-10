@@ -119,12 +119,12 @@ void DumpV2Properties(_In_ IShellLink* pslConsole)
     }
 }
 
-void DumpCoord(_In_ PCWSTR pszAttrName, const COORD coord)
+void DumpCoord(_In_ PCWSTR pszAttrName, const til::point coord)
 {
     wprintf(L"\t%s: (%d, %d) (0x%x)\n",
             pszAttrName,
-            coord.X,
-            coord.Y,
+            coord.x,
+            coord.y,
             coord);
 }
 

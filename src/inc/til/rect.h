@@ -12,6 +12,39 @@
 
 namespace til // Terminal Implementation Library. Also: "Today I Learned"
 {
+    struct inclusive_rect
+    {
+        CoordType left = 0;
+        CoordType top = 0;
+        CoordType right = 0;
+        CoordType bottom = 0;
+
+        constexpr bool operator==(const inclusive_rect& rhs) const noexcept
+        {
+            return __builtin_memcmp(this, &rhs, sizeof(rhs)) == 0;
+        }
+
+        constexpr bool operator!=(const inclusive_rect& rhs) const noexcept
+        {
+            return __builtin_memcmp(this, &rhs, sizeof(rhs)) != 0;
+        }
+    };
+
+    constexpr inclusive_rect wrap_small_rect(const SMALL_RECT& rect) noexcept
+    {
+        return { rect.Left, rect.Top, rect.Right, rect.Bottom };
+    }
+
+    constexpr SMALL_RECT unwrap_small_rect(const inclusive_rect& rect)
+    {
+        return {
+            gsl::narrow<short>(rect.left),
+            gsl::narrow<short>(rect.top),
+            gsl::narrow<short>(rect.right),
+            gsl::narrow<short>(rect.bottom),
+        };
+    }
+
     namespace details
     {
         class _rectangle_const_iterator
@@ -113,21 +146,21 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
 
         // Creates a rect where you specify the top-left corner (included)
         // and the bottom-right corner (excluded)
-        constexpr rect(til::point topLeft, til::point bottomRight) noexcept :
+        constexpr rect(point topLeft, point bottomRight) noexcept :
             left{ topLeft.x }, top{ topLeft.y }, right{ bottomRight.x }, bottom{ bottomRight.y }
         {
         }
 
         // Creates a rect with the given size where the top-left corner
         // is set to 0,0.
-        explicit constexpr rect(til::size size) noexcept :
+        explicit constexpr rect(size size) noexcept :
             right{ size.width }, bottom{ size.height }
         {
         }
 
         // Creates a rect at the given top-left corner point X,Y that extends
         // down (+Y direction) and right (+X direction) for the given size.
-        constexpr rect(til::point topLeft, til::size size) :
+        constexpr rect(point topLeft, size size) :
             rect{ topLeft, topLeft + size }
         {
         }
@@ -336,10 +369,10 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
                 // We generate these rectangles by the original and intersect points, but some of them might be empty when the intersect
                 // lines up with the edge of the original. That's OK. That just means that the subtraction didn't leave anything behind.
                 // We will filter those out below when adding them to the result.
-                const til::rect t{ left, top, right, intersect.top };
-                const til::rect b{ left, intersect.bottom, right, bottom };
-                const til::rect l{ left, intersect.top, intersect.left, intersect.bottom };
-                const til::rect r{ intersect.right, intersect.top, right, intersect.bottom };
+                const rect t{ left, top, right, intersect.top };
+                const rect b{ left, intersect.bottom, right, bottom };
+                const rect l{ left, intersect.top, intersect.left, intersect.bottom };
+                const rect r{ intersect.right, intersect.top, right, intersect.bottom };
 
                 if (!t.empty())
                 {
@@ -485,7 +518,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
                 t = details::extract(::base::CheckAdd(t, height));
             }
 
-            return rect{ til::point{ l, t }, til::point{ r, b } };
+            return rect{ point{ l, t }, point{ r, b } };
         }
 
         constexpr rect& operator+=(const size size)
@@ -573,7 +606,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
                 t = details::extract(::base::CheckSub(t, height));
             }
 
-            return rect{ til::point{ l, t }, til::point{ r, b } };
+            return rect{ point{ l, t }, point{ r, b } };
         }
 
         constexpr rect& operator-=(const size size)
@@ -586,9 +619,9 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
         // This includes moving the origin.
         constexpr rect scale_up(const size size) const
         {
-            const auto topLeft = til::point{ left, top } * size;
-            const auto bottomRight = til::point{ right, bottom } * size;
-            return til::rect{ topLeft, bottomRight };
+            const auto topLeft = point{ left, top } * size;
+            const auto bottomRight = point{ right, bottom } * size;
+            return rect{ topLeft, bottomRight };
         }
 
         // scale_down will scale the entire rect down by the size factor,
@@ -596,16 +629,16 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
         // This includes moving the origin.
         constexpr rect scale_down(const size size) const
         {
-            auto topLeft = til::point{ left, top };
-            auto bottomRight = til::point{ right, bottom };
+            auto topLeft = point{ left, top };
+            auto bottomRight = point{ right, bottom };
             topLeft = topLeft / size;
 
             // Move bottom right point into a size
             // Use size specialization of divide_ceil to round up against the size given.
             // Add leading addition to point to convert it back into a point.
-            bottomRight = til::point{} + til::size{ right, bottom }.divide_ceil(size);
+            bottomRight = point{} + til::size{ right, bottom }.divide_ceil(size);
 
-            return til::rect{ topLeft, bottomRight };
+            return rect{ topLeft, bottomRight };
         }
 
 #pragma endregion
@@ -671,7 +704,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
             return !operator bool();
         }
 
-        constexpr bool contains(til::point pt) const noexcept
+        constexpr bool contains(point pt) const noexcept
         {
             return (pt.x >= left) & (pt.x < right) &
                    (pt.y >= top) & (pt.y < bottom);
@@ -683,7 +716,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
                    (rc.right <= right) & (rc.bottom <= bottom);
         }
 
-        CoordType index_of(til::point pt) const
+        CoordType index_of(point pt) const
         {
             THROW_HR_IF(E_INVALIDARG, !contains(pt));
 
@@ -701,7 +734,7 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
             return details::extract(check);
         }
 
-        til::point point_at(size_t index) const
+        point point_at(size_t index) const
         {
             const auto width = details::extract<CoordType, size_t>(::base::CheckSub(right, left));
             const auto area = details::extract<CoordType, size_t>(::base::CheckSub(bottom, top) * width);
@@ -713,20 +746,20 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
             // this would overflow on addition after the division.
             const auto quot = gsl::narrow_cast<CoordType>(index / width);
             const auto rem = gsl::narrow_cast<CoordType>(index % width);
-            return til::point{ left + rem, top + quot };
+            return point{ left + rem, top + quot };
         }
 
 #ifdef _WINCONTYPES_
         // NOTE: This will convert from INCLUSIVE on the way in because
         // that is generally how SMALL_RECTs are handled in console code and via the APIs.
-        explicit constexpr rect(const SMALL_RECT other) noexcept :
-            rect{ other.Left, other.Top, other.Right + 1, other.Bottom + 1 }
+        explicit constexpr rect(const inclusive_rect other) noexcept :
+            rect{ other.left, other.top, other.right + 1, other.bottom + 1 }
         {
         }
 
         // NOTE: This will convert back to INCLUSIVE on the way out because
         // that is generally how SMALL_RECTs are handled in console code and via the APIs.
-        constexpr SMALL_RECT to_small_rect() const
+        constexpr inclusive_rect to_inclusive_rect() const
         {
             return {
                 gsl::narrow<short>(left),
@@ -814,34 +847,34 @@ namespace til // Terminal Implementation Library. Also: "Today I Learned"
 namespace WEX::TestExecution
 {
     template<>
-    class VerifyOutputTraits<::til::rect>
+    class VerifyOutputTraits<til::rect>
     {
     public:
-        static WEX::Common::NoThrowString ToString(const ::til::rect& rect)
+        static WEX::Common::NoThrowString ToString(const til::rect rect)
         {
             return WEX::Common::NoThrowString(rect.to_string().c_str());
         }
     };
 
     template<>
-    class VerifyCompareTraits<::til::rect, ::til::rect>
+    class VerifyCompareTraits<til::rect, til::rect>
     {
     public:
-        static bool AreEqual(const ::til::rect& expected, const ::til::rect& actual) noexcept
+        static bool AreEqual(const til::rect expected, const til::rect actual) noexcept
         {
             return expected == actual;
         }
 
-        static bool AreSame(const ::til::rect& expected, const ::til::rect& actual) noexcept
+        static bool AreSame(const til::rect expected, const til::rect actual) noexcept
         {
             return &expected == &actual;
         }
 
-        static bool IsLessThan(const ::til::rect& expectedLess, const ::til::rect& expectedGreater) = delete;
+        static bool IsLessThan(const til::rect expectedLess, const til::rect expectedGreater) = delete;
 
-        static bool IsGreaterThan(const ::til::rect& expectedGreater, const ::til::rect& expectedLess) = delete;
+        static bool IsGreaterThan(const til::rect expectedGreater, const til::rect expectedLess) = delete;
 
-        static bool IsNull(const ::til::rect& object) noexcept
+        static bool IsNull(const til::rect object) noexcept
         {
             return object == til::rect{};
         }

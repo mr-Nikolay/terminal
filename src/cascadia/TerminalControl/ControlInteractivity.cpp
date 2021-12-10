@@ -195,7 +195,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
                                               const ::Microsoft::Terminal::Core::ControlKeyStates modifiers,
                                               const til::point pixelPosition)
     {
-        const til::point terminalPosition = _getTerminalPosition(pixelPosition);
+        const auto terminalPosition = _getTerminalPosition(pixelPosition);
 
         const auto altEnabled = modifiers.IsAltPressed();
         const auto shiftEnabled = modifiers.IsShiftPressed();
@@ -278,7 +278,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
                                             const til::point pixelPosition,
                                             const bool pointerPressedInBounds)
     {
-        const til::point terminalPosition = _getTerminalPosition(pixelPosition);
+        const auto terminalPosition = _getTerminalPosition(pixelPosition);
 
         // Short-circuit isReadOnly check to avoid warning dialog
         if (focused && !_core->IsInReadOnlyMode() && _canSendVTMouseInput(modifiers))
@@ -590,7 +590,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
     //    NOTE: origin (0,0) is top-left.
     // Return Value:
     // - the corresponding viewport terminal position for the given Point parameter
-    til::point ControlInteractivity::_getTerminalPosition(const til::point& pixelPosition)
+    til::point ControlInteractivity::_getTerminalPosition(const til::point pixelPosition)
     {
         // Get the size of the font, which is in pixels
         const til::size fontSize{ _core->GetFont().GetSize() };

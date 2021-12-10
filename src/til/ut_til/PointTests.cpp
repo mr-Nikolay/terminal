@@ -48,7 +48,7 @@ class PointTests
     {
         COORD coord{ -5, 10 };
 
-        const til::point pt{ coord };
+        const til::point pt = til::wrap_coord(coord);
         VERIFY_ARE_EQUAL(coord.X, pt.x);
         VERIFY_ARE_EQUAL(coord.Y, pt.y);
     }

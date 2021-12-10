@@ -34,9 +34,7 @@ namespace Microsoft::Console::Utils
     // - The clamped value as a short.
     constexpr short ClampToShortMax(const long value, const short min) noexcept
     {
-        return static_cast<short>(std::clamp(value,
-                                             static_cast<long>(min),
-                                             static_cast<long>(SHRT_MAX)));
+        return gsl::narrow_cast<short>(std::clamp<long>(value, min, SHRT_MAX));
     }
 
     std::wstring GuidToString(const GUID guid);

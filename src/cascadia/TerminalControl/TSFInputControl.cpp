@@ -144,7 +144,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         // Get the cursor position in text buffer position
         auto cursorArgs = winrt::make_self<CursorPositionEventArgs>();
         _CurrentCursorPositionHandlers(*this, *cursorArgs);
-        const til::point cursorPos{ gsl::narrow_cast<til::CoordType>(cursorArgs->CurrentPosition().X), gsl::narrow_cast<til::CoordType>(cursorArgs->CurrentPosition().Y) };
+        const til::point cursorPos{ til::math::flooring, cursorArgs->CurrentPosition() };
 
         const double actualCanvasWidth{ Canvas().ActualWidth() };
         const double actualTextBlockHeight{ TextBlock().ActualHeight() };
@@ -216,7 +216,7 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         // Make sure that we're setting the MaxWidth to a positive number - a
         // negative number here will crash us in mysterious ways with a useless
         // stack trace
-        const auto newMaxWidth = std::max<double>(0.0, widthToTerminalEnd);
+        const auto newMaxWidth = std::max(0.0, widthToTerminalEnd);
         TextBlock().MaxWidth(newMaxWidth);
 
         // Get window in screen coordinates, this is the entire window including

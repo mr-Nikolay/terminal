@@ -20,7 +20,6 @@ static constexpr TextAttribute InvalidTextAttribute{ INVALID_COLOR, INVALID_COLO
 OutputCellIterator::OutputCellIterator(const wchar_t& wch, const size_t fillLimit) noexcept :
     _mode(Mode::Fill),
     _currentView(s_GenerateView(wch)),
-    _run(),
     _attr(InvalidTextAttribute),
     _pos(0),
     _distance(0),
@@ -36,7 +35,6 @@ OutputCellIterator::OutputCellIterator(const wchar_t& wch, const size_t fillLimi
 OutputCellIterator::OutputCellIterator(const TextAttribute& attr, const size_t fillLimit) noexcept :
     _mode(Mode::Fill),
     _currentView(s_GenerateView(attr)),
-    _run(),
     _attr(InvalidTextAttribute),
     _pos(0),
     _distance(0),
@@ -53,7 +51,6 @@ OutputCellIterator::OutputCellIterator(const TextAttribute& attr, const size_t f
 OutputCellIterator::OutputCellIterator(const wchar_t& wch, const TextAttribute& attr, const size_t fillLimit) noexcept :
     _mode(Mode::Fill),
     _currentView(s_GenerateView(wch, attr)),
-    _run(),
     _attr(InvalidTextAttribute),
     _pos(0),
     _distance(0),
@@ -69,7 +66,6 @@ OutputCellIterator::OutputCellIterator(const wchar_t& wch, const TextAttribute& 
 OutputCellIterator::OutputCellIterator(const CHAR_INFO& charInfo, const size_t fillLimit) noexcept :
     _mode(Mode::Fill),
     _currentView(s_GenerateView(charInfo)),
-    _run(),
     _attr(InvalidTextAttribute),
     _pos(0),
     _distance(0),
@@ -84,7 +80,7 @@ OutputCellIterator::OutputCellIterator(const CHAR_INFO& charInfo, const size_t f
 OutputCellIterator::OutputCellIterator(const std::wstring_view utf16Text) :
     _mode(Mode::LooseTextOnly),
     _currentView(s_GenerateView(utf16Text)),
-    _run(utf16Text),
+    _runLoose(utf16Text),
     _attr(InvalidTextAttribute),
     _pos(0),
     _distance(0),
@@ -100,7 +96,7 @@ OutputCellIterator::OutputCellIterator(const std::wstring_view utf16Text) :
 OutputCellIterator::OutputCellIterator(const std::wstring_view utf16Text, const TextAttribute attribute) :
     _mode(Mode::Loose),
     _currentView(s_GenerateView(utf16Text, attribute)),
-    _run(utf16Text),
+    _runLoose(utf16Text),
     _attr(attribute),
     _distance(0),
     _pos(0),
@@ -115,7 +111,7 @@ OutputCellIterator::OutputCellIterator(const std::wstring_view utf16Text, const 
 OutputCellIterator::OutputCellIterator(const gsl::span<const WORD> legacyAttrs) noexcept :
     _mode(Mode::LegacyAttr),
     _currentView(s_GenerateViewLegacyAttr(til::at(legacyAttrs, 0))),
-    _run(legacyAttrs),
+    _runLegacyAttr(legacyAttrs),
     _attr(InvalidTextAttribute),
     _distance(0),
     _pos(0),
@@ -130,7 +126,7 @@ OutputCellIterator::OutputCellIterator(const gsl::span<const WORD> legacyAttrs) 
 OutputCellIterator::OutputCellIterator(const gsl::span<const CHAR_INFO> charInfos) noexcept :
     _mode(Mode::CharInfo),
     _currentView(s_GenerateView(til::at(charInfos, 0))),
-    _run(charInfos),
+    _runCharInfo(charInfos),
     _attr(InvalidTextAttribute),
     _distance(0),
     _pos(0),
@@ -145,7 +141,7 @@ OutputCellIterator::OutputCellIterator(const gsl::span<const CHAR_INFO> charInfo
 OutputCellIterator::OutputCellIterator(const gsl::span<const OutputCell> cells) :
     _mode(Mode::Cell),
     _currentView(s_GenerateView(til::at(cells, 0))),
-    _run(cells),
+    _runCell(cells),
     _attr(InvalidTextAttribute),
     _distance(0),
     _pos(0),
@@ -159,42 +155,39 @@ OutputCellIterator::OutputCellIterator(const gsl::span<const OutputCell> cells) 
 // - True if the views on dereference are valid. False if it shouldn't be dereferenced.
 OutputCellIterator::operator bool() const noexcept
 {
-    try
+    switch (_mode)
     {
-        switch (_mode)
-        {
-        case Mode::Loose:
-        case Mode::LooseTextOnly:
-        {
-            // In lieu of using start and end, this custom iterator type simply becomes bool false
-            // when we run out of items to iterate over.
-            return _pos < std::get<std::wstring_view>(_run).length();
-        }
-        case Mode::Fill:
-        {
-            if (_fillLimit > 0)
-            {
-                return _pos < _fillLimit;
-            }
-            return true;
-        }
-        case Mode::Cell:
-        {
-            return _pos < std::get<gsl::span<const OutputCell>>(_run).size();
-        }
-        case Mode::CharInfo:
-        {
-            return _pos < std::get<gsl::span<const CHAR_INFO>>(_run).size();
-        }
-        case Mode::LegacyAttr:
-        {
-            return _pos < std::get<gsl::span<const WORD>>(_run).size();
-        }
-        default:
-            FAIL_FAST_HR(E_NOTIMPL);
-        }
+    case Mode::Loose:
+    case Mode::LooseTextOnly:
+    {
+        // In lieu of using start and end, this custom iterator type simply becomes bool false
+        // when we run out of items to iterate over.
+        return _pos < _runLoose.length();
     }
-    CATCH_FAIL_FAST();
+    case Mode::Fill:
+    {
+        if (_fillLimit > 0)
+        {
+            return _pos < _fillLimit;
+        }
+        return true;
+    }
+    case Mode::Cell:
+    {
+        return _pos < _runCell.size();
+    }
+    case Mode::CharInfo:
+    {
+        return _pos < _runCharInfo.size();
+    }
+    case Mode::LegacyAttr:
+    {
+        return _pos < _runLegacyAttr.size();
+    }
+    default:
+        assert(false);
+        __assume(false);
+    }
 }
 
 // Routine Description:
@@ -215,9 +208,9 @@ OutputCellIterator& OutputCellIterator::operator++()
             // When walking through a text sequence, we need to move forward by the number of wchar_ts consumed in the previous view
             // in case we had a surrogate pair (or wider complex sequence) in the previous view.
             _pos += _currentView.Chars().size();
-            if (operator bool())
+            if (_pos < _runLoose.size())
             {
-                _currentView = s_GenerateView(std::get<std::wstring_view>(_run).substr(_pos), _attr);
+                _currentView = s_GenerateView({ _runLoose.data() + _pos, _runLoose.size() - _pos }, _attr);
             }
         }
         break;
@@ -229,9 +222,9 @@ OutputCellIterator& OutputCellIterator::operator++()
             // When walking through a text sequence, we need to move forward by the number of wchar_ts consumed in the previous view
             // in case we had a surrogate pair (or wider complex sequence) in the previous view.
             _pos += _currentView.Chars().size();
-            if (operator bool())
+            if (_pos < _runLoose.size())
             {
-                _currentView = s_GenerateView(std::get<std::wstring_view>(_run).substr(_pos));
+                _currentView = s_GenerateView({ _runLoose.data() + _pos, _runLoose.size() - _pos });
             }
         }
         break;
@@ -259,13 +252,13 @@ OutputCellIterator& OutputCellIterator::operator++()
         }
         break;
     }
-    case Mode::Cell:
+    case Mode::LegacyAttr:
     {
-        // Walk forward by one because cells are assumed to be in the form they needed to be
+        // Walk forward by one because color attributes apply cell by cell (no complex text information)
         _pos++;
-        if (operator bool())
+        if (_pos < _runLegacyAttr.size())
         {
-            _currentView = s_GenerateView(til::at(std::get<gsl::span<const OutputCell>>(_run), _pos));
+            _currentView = s_GenerateViewLegacyAttr(til::at(_runLegacyAttr, _pos));
         }
         break;
     }
@@ -273,24 +266,25 @@ OutputCellIterator& OutputCellIterator::operator++()
     {
         // Walk forward by one because charinfos are just the legacy version of cells and prealigned to columns
         _pos++;
-        if (operator bool())
+        if (_pos < _runCharInfo.size())
         {
-            _currentView = s_GenerateView(til::at(std::get<gsl::span<const CHAR_INFO>>(_run), _pos));
+            _currentView = s_GenerateView(til::at(_runCharInfo, _pos));
         }
         break;
     }
-    case Mode::LegacyAttr:
+    case Mode::Cell:
     {
-        // Walk forward by one because color attributes apply cell by cell (no complex text information)
+        // Walk forward by one because cells are assumed to be in the form they needed to be
         _pos++;
-        if (operator bool())
+        if (_pos < _runCell.size())
         {
-            _currentView = s_GenerateViewLegacyAttr(til::at(std::get<gsl::span<const WORD>>(_run), _pos));
+            _currentView = s_GenerateView(til::at(_runCell, _pos));
         }
         break;
     }
     default:
-        FAIL_FAST_HR(E_NOTIMPL);
+        assert(false);
+        __assume(false);
     }
 
     return (*this);
@@ -533,14 +527,14 @@ OutputCellView OutputCellIterator::s_GenerateView(const OutputCell& cell)
 // - The number of items of the input run consumed between these two iterators.
 ptrdiff_t OutputCellIterator::GetInputDistance(OutputCellIterator other) const noexcept
 {
-    return _pos - other._pos;
+    return gsl::narrow_cast<ptrdiff_t>(_pos) - gsl::narrow_cast<ptrdiff_t>(other._pos);
 }
 
 // Routine Description:
 // - Gets the distance between two iterators relative to the number of cells inserted.
 // Return Value:
 // - The number of cells in the backing buffer filled between these two iterators.
-ptrdiff_t OutputCellIterator::GetCellDistance(OutputCellIterator other) const noexcept
+til::CoordType OutputCellIterator::GetCellDistance(OutputCellIterator other) const noexcept
 {
     return _distance - other._distance;
 }

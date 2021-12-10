@@ -119,7 +119,7 @@ void ConsoleImeInfo::ClearAllAreas()
 // - newSize - New size for conversion areas
 // Return Value:
 // - S_OK or appropriate failure HRESULT.
-[[nodiscard]] HRESULT ConsoleImeInfo::ResizeAllAreas(const COORD newSize)
+[[nodiscard]] HRESULT ConsoleImeInfo::ResizeAllAreas(const til::size newSize)
 {
     for (auto& area : ConvAreaCompStr)
     {
@@ -145,10 +145,10 @@ void ConsoleImeInfo::ClearAllAreas()
 {
     const CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
 
-    COORD bufferSize = gci.GetActiveOutputBuffer().GetBufferSize().Dimensions();
-    bufferSize.Y = 1;
+    auto bufferSize = gci.GetActiveOutputBuffer().GetBufferSize().Dimensions();
+    bufferSize.height = 1;
 
-    const COORD windowSize = gci.GetActiveOutputBuffer().GetViewport().Dimensions();
+    const auto windowSize = gci.GetActiveOutputBuffer().GetViewport().Dimensions();
 
     const TextAttribute fill = gci.GetActiveOutputBuffer().GetAttributes();
 
@@ -310,7 +310,7 @@ std::vector<OutputCell> ConsoleImeInfo::s_ConvertToCells(const std::wstring_view
 //   If the viewport is deemed too small, we'll skip past it and advance begin past the entire full-width character.
 std::vector<OutputCell>::const_iterator ConsoleImeInfo::_WriteConversionArea(const std::vector<OutputCell>::const_iterator begin,
                                                                              const std::vector<OutputCell>::const_iterator end,
-                                                                             COORD& pos,
+                                                                             til::point& pos,
                                                                              const Microsoft::Console::Types::Viewport view,
                                                                              SCREEN_INFORMATION& screenInfo)
 {
@@ -321,14 +321,14 @@ std::vector<OutputCell>::const_iterator ConsoleImeInfo::_WriteConversionArea(con
 
     // Advance the cursor position to set up the next call for success (insert the next conversion area
     // at the beginning of the following line)
-    pos.X = view.Left();
-    pos.Y++;
+    pos.x = view.Left();
+    pos.y++;
 
     // The index of the last column in the viewport. (view is inclusive)
     const auto finalViewColumn = view.RightInclusive();
 
     // The maximum number of cells we can insert into a line.
-    const auto lineWidth = finalViewColumn - insertionPos.X + 1; // +1 because view was inclusive
+    const auto lineWidth = finalViewColumn - insertionPos.x + 1; // +1 because view was inclusive
 
     // The iterator to the beginning position to form our line
     const auto lineBegin = begin;
@@ -363,13 +363,13 @@ std::vector<OutputCell>::const_iterator ConsoleImeInfo::_WriteConversionArea(con
     auto& area = ConvAreaCompStr.back();
 
     // Write our text into the conversion area.
-    area.WriteText(lineVec, insertionPos.X);
+    area.WriteText(lineVec, insertionPos.x);
 
     // Set the viewport and positioning parameters for the conversion area to describe to the renderer
     // the appropriate location to overlay this conversion area on top of the main screen buffer inside the viewport.
-    const SMALL_RECT region{ insertionPos.X, 0, gsl::narrow<SHORT>(insertionPos.X + lineVec.size() - 1), 0 };
+    const til::inclusive_rect region{ insertionPos.x, 0, gsl::narrow<til::CoordType>(insertionPos.x + lineVec.size() - 1), 0 };
     area.SetWindowInfo(region);
-    area.SetViewPos({ 0 - view.Left(), insertionPos.Y - view.Top() });
+    area.SetViewPos({ 0 - view.Left(), insertionPos.y - view.Top() });
 
     // Make it visible and paint it.
     area.SetHidden(false);
@@ -378,7 +378,7 @@ std::vector<OutputCell>::const_iterator ConsoleImeInfo::_WriteConversionArea(con
     // Notify accessibility that we have updated the text in this display region within the viewport.
     if (screenInfo.HasAccessibilityEventing())
     {
-        screenInfo.NotifyAccessibilityEventing(insertionPos.X, insertionPos.Y, gsl::narrow<SHORT>(insertionPos.X + lineVec.size() - 1), insertionPos.Y);
+        screenInfo.NotifyAccessibilityEventing(region.left, insertionPos.y, region.right, insertionPos.y);
     }
 
     // Hand back the iterator representing the end of what we used to be fed into the beginning of the next call.

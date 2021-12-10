@@ -164,18 +164,18 @@ static void AddCustomFontSizeToListIfNeeded(__in const HWND hDlg)
     {
         // we have text, now retrieve it as an actual size
         BOOL fTranslated;
-        const SHORT nPointSize = (SHORT)GetDlgItemInt(hDlg, IDD_POINTSLIST, &fTranslated, TRUE);
+        const auto nPointSize = GetDlgItemInt(hDlg, IDD_POINTSLIST, &fTranslated, TRUE);
         if (fTranslated &&
             nPointSize >= MIN_PIXEL_HEIGHT &&
             nPointSize <= MAX_PIXEL_HEIGHT &&
-            IsFontSizeCustom(gpStateInfo->FaceName, nPointSize))
+            IsFontSizeCustom(gpStateInfo->FaceName, gsl::narrow_cast<SHORT>(nPointSize)))
         {
             // we got a proper custom size. let's see if it's in our point size list
             LONG iSize = (LONG)SendDlgItemMessage(hDlg, IDD_POINTSLIST, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)wszBuf);
             if (iSize == CB_ERR)
             {
                 // the size isn't in our list, so we haven't created them yet. do so now.
-                CreateSizeForAllTTFonts(nPointSize);
+                CreateSizeForAllTTFonts(gsl::narrow_cast<SHORT>(nPointSize));
 
                 // add the size to the dialog list and select it
                 iSize = (LONG)SendDlgItemMessage(hDlg, IDD_POINTSLIST, CB_ADDSTRING, 0, (LPARAM)wszBuf);
@@ -194,9 +194,9 @@ static void AddCustomFontSizeToListIfNeeded(__in const HWND hDlg)
 
                 // now cause the hFont for this face/size combination to get loaded -- we need to do this so that the
                 // font preview has an hFont with which to render
-                COORD coordFontSize;
-                coordFontSize.X = 0;
-                coordFontSize.Y = nPointSize;
+                til::point coordFontSize;
+                coordFontSize.x = 0;
+                coordFontSize.y = nPointSize;
                 const int iFont = FindCreateFont(FF_MODERN | TMPF_VECTOR | TMPF_TRUETYPE,
                                                  wszFontFace,
                                                  coordFontSize,
@@ -245,11 +245,11 @@ FontDlgProc(
 
         if (g_fEastAsianSystem)
         {
-            SetWindowLongPtr(hDlg, GWLP_USERDATA, MAKELONG(FontInfo[g_currentFontIndex].tmCharSet, FontInfo[g_currentFontIndex].Size.Y));
+            SetWindowLongPtr(hDlg, GWLP_USERDATA, MAKELONG(FontInfo[g_currentFontIndex].tmCharSet, FontInfo[g_currentFontIndex].Size.y));
         }
         else
         {
-            SetWindowLongPtr(hDlg, GWLP_USERDATA, MAKELONG(FontInfo[g_currentFontIndex].Size.X, FontInfo[g_currentFontIndex].Size.Y));
+            SetWindowLongPtr(hDlg, GWLP_USERDATA, MAKELONG(FontInfo[g_currentFontIndex].Size.x, FontInfo[g_currentFontIndex].Size.y));
         }
 
         if (g_fHostedInFileProperties || gpStateInfo->Defaults)
@@ -313,7 +313,7 @@ FontDlgProc(
         FontListCreate(hDlg, nullptr, TRUE);
         FontIndex = FindCreateFont(gpStateInfo->FontFamily,
                                    gpStateInfo->FaceName,
-                                   gpStateInfo->FontSize,
+                                   til::wrap_coord(gpStateInfo->FontSize),
                                    gpStateInfo->FontWeight,
                                    gpStateInfo->CodePage);
         SelectCurrentSize(hDlg, bLB, FontIndex);
@@ -456,15 +456,15 @@ FontDlgProc(
 
             FontIndex = g_currentFontIndex;
 
-            if (FontInfo[FontIndex].SizeWant.Y == 0)
+            if (FontInfo[FontIndex].SizeWant.y == 0)
             {
                 // Raster Font, so save actual size
-                gpStateInfo->FontSize = FontInfo[FontIndex].Size;
+                gpStateInfo->FontSize = til::unwrap_coord(FontInfo[FontIndex].Size);
             }
             else
             {
                 // TT Font, so save desired size
-                gpStateInfo->FontSize = FontInfo[FontIndex].SizeWant;
+                gpStateInfo->FontSize = til::unwrap_coord(FontInfo[FontIndex].SizeWant);
             }
 
             gpStateInfo->FontWeight = FontInfo[FontIndex].Weight;
@@ -592,23 +592,23 @@ void AddFontSizesToList(PCWSTR pwszTTFace,
         }
 
         int ShowX;
-        if (FontInfo[i].SizeWant.X > 0)
+        if (FontInfo[i].SizeWant.x > 0)
         {
-            ShowX = FontInfo[i].SizeWant.X;
+            ShowX = FontInfo[i].SizeWant.x;
         }
         else
         {
-            ShowX = FontInfo[i].Size.X;
+            ShowX = FontInfo[i].Size.x;
         }
 
         int ShowY;
-        if (FontInfo[i].SizeWant.Y > 0)
+        if (FontInfo[i].SizeWant.y > 0)
         {
-            ShowY = FontInfo[i].SizeWant.Y;
+            ShowY = FontInfo[i].SizeWant.y;
         }
         else
         {
-            ShowY = FontInfo[i].Size.Y;
+            ShowY = FontInfo[i].Size.y;
         }
 
         /*
@@ -620,7 +620,7 @@ void AddFontSizesToList(PCWSTR pwszTTFace,
             StringCchPrintf(wszText,
                             ARRAYSIZE(wszText),
                             TEXT("%2d"),
-                            FontInfo[i].SizeWant.Y);
+                            FontInfo[i].SizeWant.y);
         }
         else
         {
@@ -1123,7 +1123,7 @@ Return Value:
 int FindCreateFont(
     __in DWORD Family,
     __in_ecount(LF_FACESIZE) LPWSTR pwszFace,
-    __in COORD Size,
+    __in til::point Size,
     __in LONG Weight,
     __in UINT CodePage)
 {
@@ -1133,7 +1133,7 @@ int FindCreateFont(
     int FontIndex = NOT_CREATED_NOR_FOUND;
     BOOL bFontOK;
     WCHAR AltFaceName[LF_FACESIZE];
-    COORD AltFontSize;
+    til::point AltFontSize;
     BYTE AltFontFamily;
     ULONG AltFontIndex = 0, i;
     LPWSTR pwszAltFace;
@@ -1145,8 +1145,8 @@ int FindCreateFont(
     DBGFONTS(("FindCreateFont Family=%x %ls (%d,%d) %d %d %x\n",
               Family,
               pwszFace,
-              Size.X,
-              Size.Y,
+              Size.x,
+              Size.y,
               Weight,
               CodePage,
               CharSet));
@@ -1159,7 +1159,7 @@ int FindCreateFont(
             {
                 pwszFace = DefaultFaceName;
             }
-            if (Size.Y == 0)
+            if (Size.y == 0)
             {
                 Size = DefaultFontSize;
             }
@@ -1172,10 +1172,10 @@ int FindCreateFont(
             {
                 pwszFace = AltFaceName;
             }
-            if (Size.Y == 0)
+            if (Size.y == 0)
             {
-                Size.X = AltFontSize.X;
-                Size.Y = AltFontSize.Y;
+                Size.x = AltFontSize.x;
+                Size.y = AltFontSize.y;
             }
         }
     }
@@ -1185,7 +1185,7 @@ int FindCreateFont(
         {
             pwszFace = DefaultFaceName;
         }
-        if (Size.Y == 0)
+        if (Size.y == 0)
         {
             Size = DefaultFontSize;
         }
@@ -1200,7 +1200,7 @@ int FindCreateFont(
             NT_SUCCESS(StringCchCopyW(DefaultTTFaceName, ARRAYSIZE(DefaultTTFaceName), szDefaultCodepageTTFont)))
         {
             pwszFace = DefaultTTFaceName;
-            Size.X = 0;
+            Size.x = 0;
         }
     }
 
@@ -1230,8 +1230,8 @@ TryFindExactFont:
         /*
          * Skip non-matching sizes
          */
-        if ((FontInfo[i].SizeWant.Y != Size.Y) &&
-            !SIZE_EQUAL(FontInfo[i].Size, Size))
+        if ((FontInfo[i].SizeWant.y != Size.y) &&
+            FontInfo[i].Size != Size)
         {
             continue;
         }
@@ -1274,11 +1274,12 @@ TryFindExactFont:
         /*
          * Didn't find the exact font, so try to create it
          */
-        if (Size.Y < 0)
+        auto points = gsl::narrow<short>(Size.y);
+        if (points < 0)
         {
-            Size.Y = -Size.Y;
+            points = -points;
         }
-        bFontOK = DoFontEnum(nullptr, pwszFace, &Size.Y, 1);
+        bFontOK = DoFontEnum(nullptr, pwszFace, &points, 1);
         if (bFontOK)
         {
             DBGFONTS(("FindCreateFont created font!\n"));
@@ -1323,7 +1324,7 @@ TryFindExactFont:
             }
         }
 
-        if (FontInfo[i].Size.Y >= Size.Y && FontInfo[i].Size.X >= Size.X)
+        if (FontInfo[i].Size.y >= Size.y && FontInfo[i].Size.x >= Size.x)
         {
             // Same family, size >= desired.
             FontIndex = i;
@@ -1353,7 +1354,7 @@ TryFindExactFont:
 
 FoundFont:
     FAIL_FAST_IF(!(FontIndex < (int)NumberOfFonts));
-    DBGFONTS(("FindCreateFont returns %x : %ls (%d,%d)\n", FontIndex, FontInfo[FontIndex].FaceName, FontInfo[FontIndex].Size.X, FontInfo[FontIndex].Size.Y));
+    DBGFONTS(("FindCreateFont returns %x : %ls (%d,%d)\n", FontIndex, FontInfo[FontIndex].FaceName, FontInfo[FontIndex].Size.x, FontInfo[FontIndex].Size.y));
     return FontIndex;
 
 #undef NOT_CREATED_NOR_FOUND
@@ -1410,7 +1411,7 @@ int SelectCurrentSize(HWND hDlg, BOOL bLB, int FontIndex)
             FontInfo[g_currentFontIndex].tmCharSet != LOBYTE(LOWORD(Size)))
         {
             WCHAR AltFaceName[LF_FACESIZE];
-            COORD AltFontSize;
+            til::point AltFontSize;
             BYTE AltFontFamily;
             ULONG AltFontIndex = 0;
 
@@ -1436,7 +1437,7 @@ int SelectCurrentSize(HWND hDlg, BOOL bLB, int FontIndex)
             {
                 iCB--;
                 FontIndex = lcbGETITEMDATA(hWndList, bLB, iCB);
-                if (FontInfo[FontIndex].Size.Y <= HIWORD(Size))
+                if (FontInfo[FontIndex].Size.y <= HIWORD(Size))
                 {
                     lcbSETCURSEL(hWndList, bLB, iCB);
                     break;
@@ -1488,7 +1489,7 @@ BOOL PreviewInit(
      */
     nFont = FindCreateFont(gpStateInfo->FontFamily,
                            gpStateInfo->FaceName,
-                           gpStateInfo->FontSize,
+                           til::wrap_coord(gpStateInfo->FontSize),
                            gpStateInfo->FontWeight,
                            gpStateInfo->CodePage);
 
@@ -1501,7 +1502,7 @@ BOOL PreviewInit(
     if (g_fHostedInFileProperties)
     {
         gpStateInfo->FontFamily = FontInfo[g_currentFontIndex].Family;
-        gpStateInfo->FontSize = FontInfo[g_currentFontIndex].Size;
+        gpStateInfo->FontSize = til::unwrap_coord(FontInfo[g_currentFontIndex].Size);
         gpStateInfo->FontWeight = FontInfo[g_currentFontIndex].Weight;
         StringCchCopyW(gpStateInfo->FaceName, ARRAYSIZE(gpStateInfo->FaceName), FontInfo[g_currentFontIndex].FaceName);
     }
@@ -1540,14 +1541,14 @@ BOOL PreviewUpdate(
     DBGFONTS(("PreviewUpdate GETCURSEL gets %x\n", lIndex));
     if ((lIndex < 0) && !bLB)
     {
-        COORD NewSize;
+        til::point NewSize;
 
         lIndex = (LONG)SendDlgItemMessage(hDlg, IDD_FACENAME, LB_GETCURSEL, 0, 0L);
         SendDlgItemMessage(hDlg, IDD_FACENAME, LB_GETTEXT, lIndex, (LPARAM)wszFace);
-        NewSize.X = 0;
-        NewSize.Y = (SHORT)GetPointSizeInRange(hDlg, MIN_PIXEL_HEIGHT, MAX_PIXEL_HEIGHT);
+        NewSize.x = 0;
+        NewSize.y = GetPointSizeInRange(hDlg, MIN_PIXEL_HEIGHT, MAX_PIXEL_HEIGHT);
 
-        if (NewSize.Y == 0)
+        if (NewSize.y == 0)
         {
             WCHAR wszBuf[60];
             /*
@@ -1614,11 +1615,11 @@ BOOL PreviewUpdate(
     SetDlgItemText(hDlg, IDD_GROUP, wszFace);
 
     /* Put the font size in the static boxes */
-    StringCchPrintf(wszText, ARRAYSIZE(wszText), TEXT("%u"), lpFont->Size.X);
+    StringCchPrintf(wszText, ARRAYSIZE(wszText), TEXT("%u"), lpFont->Size.x);
     hWnd = GetDlgItem(hDlg, IDD_FONTWIDTH);
     SetWindowText(hWnd, wszText);
     InvalidateRect(hWnd, nullptr, TRUE);
-    StringCchPrintf(wszText, ARRAYSIZE(wszText), TEXT("%u"), lpFont->Size.Y);
+    StringCchPrintf(wszText, ARRAYSIZE(wszText), TEXT("%u"), lpFont->Size.y);
     hWnd = GetDlgItem(hDlg, IDD_FONTHEIGHT);
     SetWindowText(hWnd, wszText);
     InvalidateRect(hWnd, nullptr, TRUE);
@@ -1631,8 +1632,8 @@ BOOL PreviewUpdate(
 
     DBGFONTS(("Font %x, (%d,%d) %ls\n",
               FontIndex,
-              FontInfo[FontIndex].Size.X,
-              FontInfo[FontIndex].Size.Y,
+              FontInfo[FontIndex].Size.x,
+              FontInfo[FontIndex].Size.y,
               FontInfo[FontIndex].FaceName));
 
     return TRUE;

@@ -41,14 +41,14 @@ Viewport Terminal::GetBufferSize() noexcept
     return _buffer->GetSize();
 }
 
-bool Terminal::SetCursorPosition(short x, short y) noexcept
+bool Terminal::SetCursorPosition(til::CoordType x, til::CoordType y) noexcept
 try
 {
     const auto viewport = _GetMutableViewport();
     const auto viewOrigin = viewport.Origin();
-    const short absoluteX = viewOrigin.X + x;
-    const short absoluteY = viewOrigin.Y + y;
-    COORD newPos{ absoluteX, absoluteY };
+    const auto absoluteX = viewOrigin.x + x;
+    const auto absoluteY = viewOrigin.y + y;
+    til::point newPos{ absoluteX, absoluteY };
     viewport.Clamp(newPos);
     _buffer->GetCursor().SetPosition(newPos);
 
@@ -56,14 +56,14 @@ try
 }
 CATCH_RETURN_FALSE()
 
-COORD Terminal::GetCursorPosition() noexcept
+til::point Terminal::GetCursorPosition() noexcept
 {
     const auto absoluteCursorPos = _buffer->GetCursor().GetPosition();
     const auto viewport = _GetMutableViewport();
     const auto viewOrigin = viewport.Origin();
-    const short relativeX = absoluteCursorPos.X - viewOrigin.X;
-    const short relativeY = absoluteCursorPos.Y - viewOrigin.Y;
-    COORD newPos{ relativeX, relativeY };
+    const auto relativeX = absoluteCursorPos.x - viewOrigin.x;
+    const auto relativeY = absoluteCursorPos.y - viewOrigin.y;
+    til::point newPos{ relativeX, relativeY };
 
     // TODO assert that the coord is > (0, 0) && <(view.W, view.H)
     return newPos;
@@ -82,12 +82,12 @@ try
 
     // since we explicitly just moved down a row, clear the wrap status on the
     // row we just came from
-    _buffer->GetRowByOffset(cursorPos.Y).SetWrapForced(false);
+    _buffer->GetRowByOffset(cursorPos.y).SetWrapForced(false);
 
-    cursorPos.Y++;
+    cursorPos.y++;
     if (withReturn)
     {
-        cursorPos.X = 0;
+        cursorPos.x = 0;
     }
     _AdjustCursorPosition(cursorPos);
 
@@ -105,26 +105,16 @@ CATCH_RETURN_FALSE()
 // - count, the number of characters to delete
 // Return value:
 // - true if succeeded, false otherwise
-bool Terminal::DeleteCharacter(const size_t count) noexcept
+bool Terminal::DeleteCharacter(const til::CoordType count) noexcept
 try
 {
-    SHORT dist;
-    if (!SUCCEEDED(SizeTToShort(count, &dist)))
-    {
-        return false;
-    }
     const auto cursorPos = _buffer->GetCursor().GetPosition();
     const auto copyToPos = cursorPos;
-    const COORD copyFromPos{ cursorPos.X + dist, cursorPos.Y };
-    const auto sourceWidth = _mutableViewport.RightExclusive() - copyFromPos.X;
-    SHORT width;
-    if (!SUCCEEDED(UIntToShort(sourceWidth, &width)))
-    {
-        return false;
-    }
+    const til::point copyFromPos{ cursorPos.x + count, cursorPos.y };
+    const auto sourceWidth = _mutableViewport.RightExclusive() - copyFromPos.x;
 
     // Get a rectangle of the source
-    auto source = Viewport::FromDimensions(copyFromPos, width, 1);
+    auto source = Viewport::FromDimensions(copyFromPos, sourceWidth, 1);
 
     // Get a rectangle of the target
     const auto target = Viewport::FromDimensions(copyToPos, source.Dimensions());
@@ -153,31 +143,21 @@ CATCH_RETURN_FALSE()
 // - count, the number of spaces to insert
 // Return value:
 // - true if succeeded, false otherwise
-bool Terminal::InsertCharacter(const size_t count) noexcept
+bool Terminal::InsertCharacter(const til::CoordType count) noexcept
 try
 {
     // NOTE: the code below is _extremely_ similar to DeleteCharacter
     // We will want to use this same logic and implement a helper function instead
     // that does the 'move a region from here to there' operation
     // TODO: Github issue #2163
-    SHORT dist;
-    if (!SUCCEEDED(SizeTToShort(count, &dist)))
-    {
-        return false;
-    }
+
     const auto cursorPos = _buffer->GetCursor().GetPosition();
     const auto copyFromPos = cursorPos;
-    const COORD copyToPos{ cursorPos.X + dist, cursorPos.Y };
-    const auto sourceWidth = _mutableViewport.RightExclusive() - copyFromPos.X;
-    SHORT width;
-    if (!SUCCEEDED(UIntToShort(sourceWidth, &width)))
-    {
-        return false;
-    }
+    const til::point copyToPos{ cursorPos.x + count, cursorPos.y };
+    const auto sourceWidth = _mutableViewport.RightExclusive() - copyFromPos.x;
 
     // Get a rectangle of the source
-    auto source = Viewport::FromDimensions(copyFromPos, width, 1);
-    const auto sourceOrigin = source.Origin();
+    auto source = Viewport::FromDimensions(copyFromPos, sourceWidth, 1);
 
     // Get a rectangle of the target
     const auto target = Viewport::FromDimensions(copyToPos, source.Dimensions());
@@ -192,20 +172,20 @@ try
         const auto data = OutputCell(*(_buffer->GetCellDataAt(sourcePos)));
         _buffer->Write(OutputCellIterator({ &data, 1 }), targetPos);
     } while (source.WalkInBounds(sourcePos, walkDirection) && target.WalkInBounds(targetPos, walkDirection));
-    const auto eraseIter = OutputCellIterator(UNICODE_SPACE, _buffer->GetCurrentAttributes(), dist);
+    const auto eraseIter = OutputCellIterator(UNICODE_SPACE, _buffer->GetCurrentAttributes(), count);
     _buffer->Write(eraseIter, cursorPos);
 
     return true;
 }
 CATCH_RETURN_FALSE()
 
-bool Terminal::EraseCharacters(const size_t numChars) noexcept
+bool Terminal::EraseCharacters(const til::CoordType numChars) noexcept
 try
 {
     const auto absoluteCursorPos = _buffer->GetCursor().GetPosition();
     const auto viewport = _GetMutableViewport();
-    const short distanceToRight = viewport.RightExclusive() - absoluteCursorPos.X;
-    const short fillLimit = std::min(static_cast<short>(numChars), distanceToRight);
+    const auto distanceToRight = viewport.RightExclusive() - absoluteCursorPos.x;
+    const auto fillLimit = std::min(numChars, distanceToRight);
     const auto eraseIter = OutputCellIterator(UNICODE_SPACE, _buffer->GetCurrentAttributes(), fillLimit);
     _buffer->Write(eraseIter, absoluteCursorPos);
     return true;
@@ -227,24 +207,24 @@ try
 {
     const auto cursorPos = _buffer->GetCursor().GetPosition();
     const auto viewport = _GetMutableViewport();
-    COORD startPos = { 0 };
-    startPos.Y = cursorPos.Y;
+    til::point startPos;
+    startPos.y = cursorPos.y;
     // nlength determines the number of spaces we need to write
     DWORD nlength = 0;
 
-    // Determine startPos.X and nlength by the eraseType
+    // Determine startPos.x and nlength by the eraseType
     switch (eraseType)
     {
     case DispatchTypes::EraseType::FromBeginning:
-        nlength = cursorPos.X - viewport.Left() + 1;
+        nlength = cursorPos.x - viewport.Left() + 1;
         break;
     case DispatchTypes::EraseType::ToEnd:
-        startPos.X = cursorPos.X;
-        nlength = viewport.RightExclusive() - startPos.X;
+        startPos.x = cursorPos.x;
+        nlength = viewport.RightExclusive() - startPos.x;
         break;
     case DispatchTypes::EraseType::All:
-        startPos.X = viewport.Left();
-        nlength = viewport.RightExclusive() - startPos.X;
+        startPos.x = viewport.Left();
+        nlength = viewport.RightExclusive() - startPos.x;
         break;
     default:
         return false;
@@ -271,53 +251,52 @@ try
 {
     // Store the relative cursor position so we can restore it later after we move the viewport
     const auto cursorPos = _buffer->GetCursor().GetPosition();
-#pragma warning(suppress : 26496) // This is written by ConvertToOrigin, cpp core checks is wrong saying it should be const.
     auto relativeCursor = cursorPos;
     _mutableViewport.ConvertToOrigin(&relativeCursor);
 
     // Initialize the new location of the viewport
     // the top and bottom parameters are determined by the eraseType
-    SMALL_RECT newWin;
-    newWin.Left = _mutableViewport.Left();
-    newWin.Right = _mutableViewport.RightExclusive();
+    til::inclusive_rect newWin;
+    newWin.left = _mutableViewport.Left();
+    newWin.right = _mutableViewport.RightExclusive();
 
     if (eraseType == DispatchTypes::EraseType::All)
     {
         // In this case, we simply move the viewport down, effectively pushing whatever text was on the screen into the scrollback
         // and thus 'erasing' the text visible to the user
         const auto coordLastChar = _buffer->GetLastNonSpaceCharacter(_mutableViewport);
-        if (coordLastChar.X == 0 && coordLastChar.Y == 0)
+        if (coordLastChar.x == 0 && coordLastChar.y == 0)
         {
             // Nothing to clear, just return
             return true;
         }
 
-        short sNewTop = coordLastChar.Y + 1;
+        auto sNewTop = coordLastChar.y + 1;
 
         // Increment the circular buffer only if the new location of the viewport would be 'below' the buffer
-        const short delta = (sNewTop + _mutableViewport.Height()) - (_buffer->GetSize().Height());
+        const auto delta = (sNewTop + _mutableViewport.Height()) - (_buffer->GetSize().Height());
         for (auto i = 0; i < delta; i++)
         {
             _buffer->IncrementCircularBuffer();
             sNewTop--;
         }
 
-        newWin.Top = sNewTop;
-        newWin.Bottom = sNewTop + _mutableViewport.Height();
+        newWin.top = sNewTop;
+        newWin.bottom = sNewTop + _mutableViewport.Height();
     }
     else if (eraseType == DispatchTypes::EraseType::Scrollback)
     {
         // We only want to erase the scrollback, and leave everything else on the screen as it is
         // so we grab the text in the viewport and rotate it up to the top of the buffer
-        COORD scrollFromPos{ 0, 0 };
+        til::point scrollFromPos{ 0, 0 };
         _mutableViewport.ConvertFromOrigin(&scrollFromPos);
-        _buffer->ScrollRows(scrollFromPos.Y, _mutableViewport.Height(), -scrollFromPos.Y);
+        _buffer->ScrollRows(scrollFromPos.y, _mutableViewport.Height(), -scrollFromPos.y);
 
         // Since we only did a rotation, the text that was in the scrollback is now _below_ where we are going to move the viewport
         // and we have to make sure we erase that text
         const auto eraseStart = _mutableViewport.Height();
-        const auto eraseEnd = _buffer->GetLastNonSpaceCharacter(_mutableViewport).Y;
-        for (SHORT i = eraseStart; i <= eraseEnd; i++)
+        const auto eraseEnd = _buffer->GetLastNonSpaceCharacter(_mutableViewport).y;
+        for (auto i = eraseStart; i <= eraseEnd; i++)
         {
             _buffer->GetRowByOffset(i).Reset(_buffer->GetCurrentAttributes());
         }
@@ -325,8 +304,8 @@ try
         // Reset the scroll offset now because there's nothing for the user to 'scroll' to
         _scrollOffset = 0;
 
-        newWin.Top = 0;
-        newWin.Bottom = _mutableViewport.Height();
+        newWin.top = 0;
+        newWin.bottom = _mutableViewport.Height();
     }
     else
     {
@@ -336,7 +315,7 @@ try
     // Move the viewport, adjust the scroll bar if needed, and restore the old cursor position
     _mutableViewport = Viewport::FromExclusive(newWin);
     Terminal::_NotifyScrollEvent();
-    SetCursorPosition(relativeCursor.X, relativeCursor.Y);
+    SetCursorPosition(relativeCursor.x, relativeCursor.y);
 
     return true;
 }

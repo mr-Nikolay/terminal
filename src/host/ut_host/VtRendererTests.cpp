@@ -95,10 +95,10 @@ class Microsoft::Console::Render::VtRendererTest
 
 Viewport VtRendererTest::SetUpViewport()
 {
-    SMALL_RECT view = {};
-    view.Top = view.Left = 0;
-    view.Bottom = 31;
-    view.Right = 79;
+    til::inclusive_rect view;
+    view.top = view.left = 0;
+    view.bottom = 31;
+    view.right = 79;
 
     return Viewport::FromInclusive(view);
 }
@@ -230,7 +230,7 @@ void VtRendererTest::Xterm256TestInvalidate()
 
     Log::Comment(NoThrowString().Format(
         L"Make sure that invalidating anything only invalidates that portion"));
-    SMALL_RECT invalid = { 1, 1, 2, 2 };
+    til::inclusive_rect invalid{ 1, 1, 2, 2 };
     VERIFY_SUCCEEDED(engine->Invalidate(&invalid));
     TestPaint(*engine, [&]() {
         VERIFY_IS_TRUE(engine->_invalidMap.one());
@@ -239,13 +239,13 @@ void VtRendererTest::Xterm256TestInvalidate()
 
     Log::Comment(NoThrowString().Format(
         L"Make sure that scrolling only invalidates part of the viewport, and sends the right sequences"));
-    COORD scrollDelta = { 0, 1 };
+    til::point scrollDelta{ 0, 1 };
     VERIFY_SUCCEEDED(engine->InvalidateScroll(&scrollDelta));
     TestPaint(*engine, [&]() {
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled one down, only top line is invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 1;
+        invalid.bottom = 1;
 
         const auto runs = engine->_invalidMap.runs();
         VERIFY_ARE_EQUAL(1u, runs.size());
@@ -263,7 +263,7 @@ void VtRendererTest::Xterm256TestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three down, only top 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 3;
+        invalid.bottom = 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -287,7 +287,7 @@ void VtRendererTest::Xterm256TestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled one up, only bottom line is invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Top = invalid.Bottom - 1;
+        invalid.top = invalid.bottom - 1;
 
         const auto runs = engine->_invalidMap.runs();
         VERIFY_ARE_EQUAL(1u, runs.size());
@@ -304,7 +304,7 @@ void VtRendererTest::Xterm256TestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three up, only bottom 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Top = invalid.Bottom - 3;
+        invalid.top = invalid.bottom - 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -334,7 +334,7 @@ void VtRendererTest::Xterm256TestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three down, only top 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 3;
+        invalid.bottom = 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -908,7 +908,7 @@ void VtRendererTest::XtermTestInvalidate()
 
     Log::Comment(NoThrowString().Format(
         L"Make sure that invalidating anything only invalidates that portion"));
-    SMALL_RECT invalid = { 1, 1, 2, 2 };
+    til::inclusive_rect invalid{ 1, 1, 2, 2 };
     VERIFY_SUCCEEDED(engine->Invalidate(&invalid));
     TestPaint(*engine, [&]() {
         VERIFY_IS_TRUE(engine->_invalidMap.one());
@@ -917,13 +917,13 @@ void VtRendererTest::XtermTestInvalidate()
 
     Log::Comment(NoThrowString().Format(
         L"Make sure that scrolling only invalidates part of the viewport, and sends the right sequences"));
-    COORD scrollDelta = { 0, 1 };
+    til::point scrollDelta{ 0, 1 };
     VERIFY_SUCCEEDED(engine->InvalidateScroll(&scrollDelta));
     TestPaint(*engine, [&]() {
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled one down, only top line is invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 1;
+        invalid.bottom = 1;
 
         const auto runs = engine->_invalidMap.runs();
         VERIFY_ARE_EQUAL(1u, runs.size());
@@ -940,7 +940,7 @@ void VtRendererTest::XtermTestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three down, only top 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 3;
+        invalid.bottom = 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -964,7 +964,7 @@ void VtRendererTest::XtermTestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled one up, only bottom line is invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Top = invalid.Bottom - 1;
+        invalid.top = invalid.bottom - 1;
 
         const auto runs = engine->_invalidMap.runs();
         VERIFY_ARE_EQUAL(1u, runs.size());
@@ -981,7 +981,7 @@ void VtRendererTest::XtermTestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three up, only bottom 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Top = invalid.Bottom - 3;
+        invalid.top = invalid.bottom - 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -1011,7 +1011,7 @@ void VtRendererTest::XtermTestInvalidate()
         Log::Comment(NoThrowString().Format(
             L"---- Scrolled three down, only top 3 lines are invalid. ----"));
         invalid = view.ToExclusive();
-        invalid.Bottom = 3;
+        invalid.bottom = 3;
 
         // we should have 3 runs and build a rectangle out of them
         const auto runs = engine->_invalidMap.runs();
@@ -1487,7 +1487,7 @@ void VtRendererTest::TestCursorVisibility()
     VERIFY_IS_FALSE(engine->_lastCursorIsVisible);
     VERIFY_IS_FALSE(engine->_nextCursorIsVisible);
 
-    COORD origin{ 0, 0 };
+    til::point origin{ 0, 0 };
 
     VERIFY_ARE_NOT_EQUAL(origin, engine->_lastText);
 

@@ -98,7 +98,7 @@ void AdaptDispatch::PrintString(const std::wstring_view string)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorUp(const size_t distance)
+bool AdaptDispatch::CursorUp(const int distance)
 {
     return _CursorMovePosition(Offset::Backward(distance), Offset::Unchanged(), true);
 }
@@ -114,7 +114,7 @@ bool AdaptDispatch::CursorUp(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorDown(const size_t distance)
+bool AdaptDispatch::CursorDown(const int distance)
 {
     return _CursorMovePosition(Offset::Forward(distance), Offset::Unchanged(), true);
 }
@@ -125,7 +125,7 @@ bool AdaptDispatch::CursorDown(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorForward(const size_t distance)
+bool AdaptDispatch::CursorForward(const int distance)
 {
     return _CursorMovePosition(Offset::Unchanged(), Offset::Forward(distance), true);
 }
@@ -136,7 +136,7 @@ bool AdaptDispatch::CursorForward(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorBackward(const size_t distance)
+bool AdaptDispatch::CursorBackward(const int distance)
 {
     return _CursorMovePosition(Offset::Unchanged(), Offset::Backward(distance), true);
 }
@@ -148,7 +148,7 @@ bool AdaptDispatch::CursorBackward(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorNextLine(const size_t distance)
+bool AdaptDispatch::CursorNextLine(const int distance)
 {
     return _CursorMovePosition(Offset::Forward(distance), Offset::Absolute(1), true);
 }
@@ -160,7 +160,7 @@ bool AdaptDispatch::CursorNextLine(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorPrevLine(const size_t distance)
+bool AdaptDispatch::CursorPrevLine(const int distance)
 {
     return _CursorMovePosition(Offset::Backward(distance), Offset::Absolute(1), true);
 }
@@ -192,8 +192,8 @@ bool AdaptDispatch::_CursorMovePosition(const Offset rowOffset, const Offset col
         const int viewportBottom = csbiex.srWindow.Bottom - 1;
 
         // Calculate the absolute margins of the scrolling area.
-        const int topMargin = viewportTop + _scrollMargins.Top;
-        const int bottomMargin = viewportTop + _scrollMargins.Bottom;
+        const int topMargin = viewportTop + _scrollMargins.top;
+        const int bottomMargin = viewportTop + _scrollMargins.bottom;
         const bool marginsSet = topMargin < bottomMargin;
 
         // For relative movement, the given offsets will be relative to
@@ -245,7 +245,7 @@ bool AdaptDispatch::_CursorMovePosition(const Offset rowOffset, const Offset col
         }
 
         // Finally, attempt to set the adjusted cursor position back into the console.
-        const COORD newPos = { gsl::narrow_cast<SHORT>(col), gsl::narrow_cast<SHORT>(row) };
+        const til::point newPos{ col, row };
         success = _pConApi->SetConsoleCursorPosition(newPos);
     }
 
@@ -258,7 +258,7 @@ bool AdaptDispatch::_CursorMovePosition(const Offset rowOffset, const Offset col
 // - column - Specific X/Column position to move to
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorHorizontalPositionAbsolute(const size_t column)
+bool AdaptDispatch::CursorHorizontalPositionAbsolute(const int column)
 {
     return _CursorMovePosition(Offset::Unchanged(), Offset::Absolute(column), false);
 }
@@ -269,7 +269,7 @@ bool AdaptDispatch::CursorHorizontalPositionAbsolute(const size_t column)
 // - line - Specific Y/Row position to move to
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::VerticalLinePositionAbsolute(const size_t line)
+bool AdaptDispatch::VerticalLinePositionAbsolute(const int line)
 {
     return _CursorMovePosition(Offset::Absolute(line), Offset::Unchanged(), false);
 }
@@ -281,7 +281,7 @@ bool AdaptDispatch::VerticalLinePositionAbsolute(const size_t line)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::HorizontalPositionRelative(const size_t distance)
+bool AdaptDispatch::HorizontalPositionRelative(const int distance)
 {
     return _CursorMovePosition(Offset::Unchanged(), Offset::Forward(distance), false);
 }
@@ -293,7 +293,7 @@ bool AdaptDispatch::HorizontalPositionRelative(const size_t distance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::VerticalPositionRelative(const size_t distance)
+bool AdaptDispatch::VerticalPositionRelative(const int distance)
 {
     return _CursorMovePosition(Offset::Forward(distance), Offset::Unchanged(), false);
 }
@@ -305,7 +305,7 @@ bool AdaptDispatch::VerticalPositionRelative(const size_t distance)
 // - column - Specific X/Column position to move to
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::CursorPosition(const size_t line, const size_t column)
+bool AdaptDispatch::CursorPosition(const int line, const int column)
 {
     return _CursorMovePosition(Offset::Absolute(line), Offset::Absolute(column), false);
 }
@@ -334,7 +334,7 @@ bool AdaptDispatch::CursorSaveState()
     {
         // The cursor is given to us by the API as relative to the whole buffer.
         // But in VT speak, the cursor row should be relative to the current viewport top.
-        COORD coordCursor = csbiex.dwCursorPosition;
+        auto coordCursor = csbiex.dwCursorPosition;
         coordCursor.Y -= csbiex.srWindow.Top;
 
         // VT is also 1 based, not 0 based, so correct by 1.
@@ -368,10 +368,10 @@ bool AdaptDispatch::CursorRestoreState()
 
     // If the origin mode is relative, and the scrolling region is set (the bottom is non-zero),
     // we need to make sure the restored position is clamped within the margins.
-    if (savedCursorState.IsOriginModeRelative && _scrollMargins.Bottom != 0)
+    if (savedCursorState.IsOriginModeRelative && _scrollMargins.bottom != 0)
     {
         // VT origin is at 1,1 so we need to add 1 to these margins.
-        row = std::clamp(row, _scrollMargins.Top + 1u, _scrollMargins.Bottom + 1u);
+        row = std::clamp(row, _scrollMargins.top + 1u, _scrollMargins.bottom + 1u);
     }
 
     // The saved coordinates are always absolute, so we need reset the origin mode temporarily.
@@ -420,11 +420,11 @@ bool AdaptDispatch::CursorVisibility(const bool fIsVisible)
 // - isInsert - TRUE if insert mode (cut and paste to the right, away from the cursor). FALSE if delete mode (cut and paste to the left, toward the cursor)
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::_InsertDeleteHelper(const size_t count, const bool isInsert) const
+bool AdaptDispatch::_InsertDeleteHelper(const int count, const bool isInsert) const
 {
     // We'll be doing short math on the distance since all console APIs use shorts. So check that we can successfully convert the uint into a short first.
-    SHORT distance;
-    RETURN_BOOL_IF_FALSE(SUCCEEDED(SizeTToShort(count, &distance)));
+    til::CoordType distance;
+    RETURN_BOOL_IF_FALSE(SUCCEEDED(SizeTToInt(count, &distance)));
 
     // get current cursor, attributes
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
@@ -436,27 +436,25 @@ bool AdaptDispatch::_InsertDeleteHelper(const size_t count, const bool isInsert)
 
     const auto cursor = csbiex.dwCursorPosition;
     // Rectangle to cut out of the existing buffer. This is inclusive.
-    SMALL_RECT srScroll;
-    srScroll.Left = cursor.X;
-    srScroll.Right = _pConApi->PrivateGetLineWidth(cursor.Y) - 1;
-    srScroll.Top = cursor.Y;
-    srScroll.Bottom = srScroll.Top;
+    til::inclusive_rect srScroll;
+    srScroll.left = cursor.X;
+    srScroll.right = _pConApi->PrivateGetLineWidth(cursor.Y) - 1;
+    srScroll.top = cursor.Y;
+    srScroll.bottom = srScroll.top;
 
     // Paste coordinate for cut text above
-    COORD coordDestination;
-    coordDestination.Y = cursor.Y;
-    coordDestination.X = cursor.X;
+    auto coordDestination = til::wrap_coord(cursor);
 
     bool success = false;
     if (isInsert)
     {
         // Insert makes space by moving characters out to the right. So move the destination of the cut/paste region.
-        success = SUCCEEDED(ShortAdd(coordDestination.X, distance, &coordDestination.X));
+        success = SUCCEEDED(IntAdd(coordDestination.x, distance, &coordDestination.x));
     }
     else
     {
         // Delete scrolls the affected region to the left, relying on the clipping rect to actually delete the characters.
-        success = SUCCEEDED(ShortSub(coordDestination.X, distance, &coordDestination.X));
+        success = SUCCEEDED(IntSub(coordDestination.x, distance, &coordDestination.x));
     }
 
     if (success)
@@ -475,7 +473,7 @@ bool AdaptDispatch::_InsertDeleteHelper(const size_t count, const bool isInsert)
 // - count - The number of characters to insert
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::InsertCharacter(const size_t count)
+bool AdaptDispatch::InsertCharacter(const int count)
 {
     return _InsertDeleteHelper(count, true);
 }
@@ -487,7 +485,7 @@ bool AdaptDispatch::InsertCharacter(const size_t count)
 // - count - The number of characters to delete
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::DeleteCharacter(const size_t count)
+bool AdaptDispatch::DeleteCharacter(const int count)
 {
     return _InsertDeleteHelper(count, false);
 }
@@ -504,10 +502,10 @@ bool AdaptDispatch::DeleteCharacter(const size_t count)
 // - True if handled successfully. False otherwise.
 bool AdaptDispatch::_EraseSingleLineHelper(const CONSOLE_SCREEN_BUFFER_INFOEX& csbiex,
                                            const DispatchTypes::EraseType eraseType,
-                                           const size_t lineId) const
+                                           const int lineId) const
 {
-    COORD coordStartPosition = { 0 };
-    if (FAILED(SizeTToShort(lineId, &coordStartPosition.Y)))
+    til::point coordStartPosition;
+    if (FAILED(SizeTToInt(lineId, &coordStartPosition.y)))
     {
         return false;
     }
@@ -518,10 +516,10 @@ bool AdaptDispatch::_EraseSingleLineHelper(const CONSOLE_SCREEN_BUFFER_INFOEX& c
     {
     case DispatchTypes::EraseType::FromBeginning:
     case DispatchTypes::EraseType::All:
-        coordStartPosition.X = 0; // from beginning and the whole line start from the left most edge of the buffer.
+        coordStartPosition.x = 0; // from beginning and the whole line start from the left most edge of the buffer.
         break;
     case DispatchTypes::EraseType::ToEnd:
-        coordStartPosition.X = csbiex.dwCursorPosition.X; // from the current cursor position (including it)
+        coordStartPosition.x = csbiex.dwCursorPosition.X; // from the current cursor position (including it)
         break;
     }
 
@@ -537,7 +535,7 @@ bool AdaptDispatch::_EraseSingleLineHelper(const CONSOLE_SCREEN_BUFFER_INFOEX& c
     case DispatchTypes::EraseType::ToEnd:
     case DispatchTypes::EraseType::All:
         // Remember the .X value is 1 farther than the right most column in the buffer. Therefore no +1.
-        nLength = _pConApi->PrivateGetLineWidth(lineId) - coordStartPosition.X;
+        nLength = _pConApi->PrivateGetLineWidth(lineId) - coordStartPosition.x;
         break;
     }
 
@@ -554,7 +552,7 @@ bool AdaptDispatch::_EraseSingleLineHelper(const CONSOLE_SCREEN_BUFFER_INFOEX& c
 // - numChars - The number of characters to erase.
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::EraseCharacters(const size_t numChars)
+bool AdaptDispatch::EraseCharacters(const int numChars)
 {
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
@@ -562,10 +560,10 @@ bool AdaptDispatch::EraseCharacters(const size_t numChars)
 
     if (success)
     {
-        const COORD startPosition = csbiex.dwCursorPosition;
+        const auto startPosition = til::wrap_coord(csbiex.dwCursorPosition);
 
-        const SHORT remainingSpaces = csbiex.dwSize.X - startPosition.X;
-        const size_t actualRemaining = gsl::narrow_cast<size_t>((remainingSpaces < 0) ? 0 : remainingSpaces);
+        const auto remainingSpaces = csbiex.dwSize.X - startPosition.x;
+        const auto actualRemaining = gsl::narrow_cast<int>((remainingSpaces < 0) ? 0 : remainingSpaces);
         // erase at max the number of characters remaining in the line from the current position.
         const auto eraseLength = (numChars <= actualRemaining) ? numChars : actualRemaining;
 
@@ -655,7 +653,7 @@ bool AdaptDispatch::EraseInDisplay(const DispatchTypes::EraseType eraseType)
         if (eraseType == DispatchTypes::EraseType::FromBeginning)
         {
             // For beginning and all, erase all complete lines before (above vertically) from the cursor position.
-            for (SHORT startLine = csbiex.srWindow.Top; startLine < csbiex.dwCursorPosition.Y; startLine++)
+            for (auto startLine = csbiex.srWindow.Top; startLine < csbiex.dwCursorPosition.Y; startLine++)
             {
                 success = _EraseSingleLineHelper(csbiex, DispatchTypes::EraseType::All, startLine);
 
@@ -679,7 +677,7 @@ bool AdaptDispatch::EraseInDisplay(const DispatchTypes::EraseType eraseType)
             {
                 // For beginning and all, erase all complete lines after (below vertically) the cursor position.
                 // Remember that the viewport bottom value is 1 beyond the viewable area of the viewport.
-                for (SHORT startLine = csbiex.dwCursorPosition.Y + 1; startLine < csbiex.srWindow.Bottom; startLine++)
+                for (auto startLine = csbiex.dwCursorPosition.Y + 1; startLine < csbiex.srWindow.Bottom; startLine++)
                 {
                     success = _EraseSingleLineHelper(csbiex, DispatchTypes::EraseType::All, startLine);
 
@@ -868,24 +866,24 @@ bool AdaptDispatch::_CursorPositionReport() const
     if (success)
     {
         // First pull the cursor position relative to the entire buffer out of the console.
-        COORD coordCursorPos = csbiex.dwCursorPosition;
+        auto coordCursorPos = til::wrap_coord(csbiex.dwCursorPosition);
 
         // Now adjust it for its position in respect to the current viewport top.
-        coordCursorPos.Y -= csbiex.srWindow.Top;
+        coordCursorPos.y -= csbiex.srWindow.Top;
 
         // NOTE: 1,1 is the top-left corner of the viewport in VT-speak, so add 1.
-        coordCursorPos.X++;
-        coordCursorPos.Y++;
+        coordCursorPos.x++;
+        coordCursorPos.y++;
 
         // If the origin mode is relative, line numbers start at top margin of the scrolling region.
         if (_isOriginModeRelative)
         {
-            coordCursorPos.Y -= _scrollMargins.Top;
+            coordCursorPos.y -= _scrollMargins.top;
         }
 
         // Now send it back into the input channel of the console.
         // First format the response string.
-        const auto response = wil::str_printf<std::wstring>(L"\x1b[%d;%dR", coordCursorPos.Y, coordCursorPos.X);
+        const auto response = wil::str_printf<std::wstring>(L"\x1b[%d;%dR", coordCursorPos.y, coordCursorPos.x);
         success = _WriteResponse(response);
     }
 
@@ -941,9 +939,9 @@ bool AdaptDispatch::_WriteResponse(const std::wstring_view reply) const
 // - distance - Magnitude of the move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::_ScrollMovement(const ScrollDirection scrollDirection, const size_t distance) const
+bool AdaptDispatch::_ScrollMovement(const ScrollDirection scrollDirection, const int distance) const
 {
-    // We'll be doing short math on the distance since all console APIs use shorts. So check that we can successfully convert the size_t into a short first.
+    // We'll be doing short math on the distance since all console APIs use shorts. So check that we can successfully convert the int into a short first.
     SHORT dist;
     bool success = SUCCEEDED(SizeTToShort(distance, &dist));
 
@@ -960,22 +958,22 @@ bool AdaptDispatch::_ScrollMovement(const ScrollDirection scrollDirection, const
         {
             // Rectangle to cut out of the existing buffer. This is inclusive.
             // It will be clipped to the buffer boundaries so SHORT_MAX gives us the full buffer width.
-            SMALL_RECT srScreen;
-            srScreen.Left = 0;
-            srScreen.Right = SHORT_MAX;
-            srScreen.Top = csbiex.srWindow.Top;
-            srScreen.Bottom = csbiex.srWindow.Bottom - 1; // srWindow is exclusive, hence the - 1
+            til::inclusive_rect srScreen;
+            srScreen.left = 0;
+            srScreen.right = SHORT_MAX;
+            srScreen.top = csbiex.srWindow.Top;
+            srScreen.bottom = csbiex.srWindow.Bottom - 1; // srWindow is exclusive, hence the - 1
             // Clip to the DECSTBM margin boundaries
-            if (_scrollMargins.Top < _scrollMargins.Bottom)
+            if (_scrollMargins.top < _scrollMargins.bottom)
             {
-                srScreen.Top = csbiex.srWindow.Top + _scrollMargins.Top;
-                srScreen.Bottom = csbiex.srWindow.Top + _scrollMargins.Bottom;
+                srScreen.top = csbiex.srWindow.Top + _scrollMargins.top;
+                srScreen.bottom = csbiex.srWindow.Top + _scrollMargins.bottom;
             }
 
             // Paste coordinate for cut text above
-            COORD coordDestination;
-            coordDestination.X = srScreen.Left;
-            coordDestination.Y = srScreen.Top + dist * (scrollDirection == ScrollDirection::Up ? -1 : 1);
+            til::point coordDestination;
+            coordDestination.x = srScreen.left;
+            coordDestination.y = srScreen.top + dist * (scrollDirection == ScrollDirection::Up ? -1 : 1);
 
             // Note the revealed lines are filled with the standard erase attributes.
             success = _pConApi->PrivateScrollRegion(srScreen, srScreen, coordDestination, true);
@@ -991,7 +989,7 @@ bool AdaptDispatch::_ScrollMovement(const ScrollDirection scrollDirection, const
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::ScrollUp(const size_t uiDistance)
+bool AdaptDispatch::ScrollUp(const int uiDistance)
 {
     return _ScrollMovement(ScrollDirection::Up, uiDistance);
 }
@@ -1002,7 +1000,7 @@ bool AdaptDispatch::ScrollUp(const size_t uiDistance)
 // - distance - Distance to move
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::ScrollDown(const size_t uiDistance)
+bool AdaptDispatch::ScrollDown(const int uiDistance)
 {
     return _ScrollMovement(ScrollDirection::Down, uiDistance);
 }
@@ -1015,7 +1013,7 @@ bool AdaptDispatch::ScrollDown(const size_t uiDistance)
 // - columns - Number of columns
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::SetColumns(const size_t columns)
+bool AdaptDispatch::SetColumns(const int columns)
 {
     SHORT col;
     bool success = SUCCEEDED(SizeTToShort(columns, &col));
@@ -1041,7 +1039,7 @@ bool AdaptDispatch::SetColumns(const size_t columns)
 // - columns - Number of columns
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::_DoDECCOLMHelper(const size_t columns)
+bool AdaptDispatch::_DoDECCOLMHelper(const int columns)
 {
     if (!_isDECCOLMAllowed)
     {
@@ -1214,7 +1212,7 @@ bool AdaptDispatch::EnableCursorBlinking(const bool enable)
 // - distance - number of lines to insert
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::InsertLine(const size_t distance)
+bool AdaptDispatch::InsertLine(const int distance)
 {
     return _pConApi->InsertLines(distance);
 }
@@ -1231,7 +1229,7 @@ bool AdaptDispatch::InsertLine(const size_t distance)
 // - distance - number of lines to delete
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::DeleteLine(const size_t distance)
+bool AdaptDispatch::DeleteLine(const int distance)
 {
     return _pConApi->DeleteLines(distance);
 }
@@ -1310,8 +1308,8 @@ bool AdaptDispatch::SetAutoWrapMode(const bool wrapAtEOL)
 // - bottomMargin - the line number for the bottom margin.
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::_DoSetTopBottomScrollingMargins(const size_t topMargin,
-                                                    const size_t bottomMargin)
+bool AdaptDispatch::_DoSetTopBottomScrollingMargins(const int topMargin,
+                                                    const int bottomMargin)
 {
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
@@ -1326,12 +1324,12 @@ bool AdaptDispatch::_DoSetTopBottomScrollingMargins(const size_t topMargin,
     // an illegal combo (eg, 3;2r) is ignored
     if (success)
     {
-        SHORT actualTop = 0;
-        SHORT actualBottom = 0;
-        success = SUCCEEDED(SizeTToShort(topMargin, &actualTop)) && SUCCEEDED(SizeTToShort(bottomMargin, &actualBottom));
+        til::CoordType actualTop = 0;
+        til::CoordType actualBottom = 0;
+        success = SUCCEEDED(SizeTToInt(topMargin, &actualTop)) && SUCCEEDED(SizeTToInt(bottomMargin, &actualBottom));
         if (success)
         {
-            const SHORT screenHeight = csbiex.srWindow.Bottom - csbiex.srWindow.Top;
+            const auto screenHeight = csbiex.srWindow.Bottom - csbiex.srWindow.Top;
             // The default top margin is line 1
             if (actualTop == 0)
             {
@@ -1362,8 +1360,8 @@ bool AdaptDispatch::_DoSetTopBottomScrollingMargins(const size_t topMargin,
                     actualTop -= 1;
                     actualBottom -= 1;
                 }
-                _scrollMargins.Top = actualTop;
-                _scrollMargins.Bottom = actualBottom;
+                _scrollMargins.top = actualTop;
+                _scrollMargins.bottom = actualBottom;
                 success = _pConApi->PrivateSetScrollingRegion(_scrollMargins);
             }
         }
@@ -1381,8 +1379,8 @@ bool AdaptDispatch::_DoSetTopBottomScrollingMargins(const size_t topMargin,
 // - bottomMargin - the line number for the bottom margin.
 // Return Value:
 // - True if handled successfully. False otherwise.
-bool AdaptDispatch::SetTopBottomScrollingMargins(const size_t topMargin,
-                                                 const size_t bottomMargin)
+bool AdaptDispatch::SetTopBottomScrollingMargins(const int topMargin,
+                                                 const int bottomMargin)
 {
     // When this is called, the cursor should also be moved to home.
     // Other functions that only need to set/reset the margins should call _DoSetTopBottomScrollingMargins
@@ -1531,7 +1529,7 @@ bool AdaptDispatch::HorizontalTabSet()
 // - numTabs - the number of tabs to perform
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::ForwardTab(const size_t numTabs)
+bool AdaptDispatch::ForwardTab(const int numTabs)
 {
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
@@ -1541,7 +1539,7 @@ bool AdaptDispatch::ForwardTab(const size_t numTabs)
         const auto width = csbiex.dwSize.X;
         const auto row = csbiex.dwCursorPosition.Y;
         auto column = csbiex.dwCursorPosition.X;
-        auto tabsPerformed = 0u;
+        auto tabsPerformed = 0;
 
         _InitTabStopsForWidth(width);
         while (column + 1 < width && tabsPerformed < numTabs)
@@ -1565,7 +1563,7 @@ bool AdaptDispatch::ForwardTab(const size_t numTabs)
 // - numTabs - the number of tabs to perform
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::BackwardsTab(const size_t numTabs)
+bool AdaptDispatch::BackwardsTab(const int numTabs)
 {
     CONSOLE_SCREEN_BUFFER_INFOEX csbiex = { 0 };
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
@@ -1575,7 +1573,7 @@ bool AdaptDispatch::BackwardsTab(const size_t numTabs)
         const auto width = csbiex.dwSize.X;
         const auto row = csbiex.dwCursorPosition.Y;
         auto column = csbiex.dwCursorPosition.X;
-        auto tabsPerformed = 0u;
+        auto tabsPerformed = 0;
 
         _InitTabStopsForWidth(width);
         while (column > 0 && tabsPerformed < numTabs)
@@ -1675,7 +1673,7 @@ void AdaptDispatch::_ResetTabStops() noexcept
 // - width - the width of the screen buffer that we need to accomodate
 // Return value:
 // - <none>
-void AdaptDispatch::_InitTabStopsForWidth(const size_t width)
+void AdaptDispatch::_InitTabStopsForWidth(const int width)
 {
     const auto initialWidth = _tabStopColumns.size();
     if (width > initialWidth)
@@ -1751,7 +1749,7 @@ bool AdaptDispatch::DesignateCodingSystem(const VTID codingSystem)
 // - charset - The identifier indicating the charset that will be used.
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::Designate94Charset(const size_t gsetNumber, const VTID charset)
+bool AdaptDispatch::Designate94Charset(const int gsetNumber, const VTID charset)
 {
     return _termOutput.Designate94Charset(gsetNumber, charset);
 }
@@ -1766,7 +1764,7 @@ bool AdaptDispatch::Designate94Charset(const size_t gsetNumber, const VTID chars
 // - charset - The identifier indicating the charset that will be used.
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::Designate96Charset(const size_t gsetNumber, const VTID charset)
+bool AdaptDispatch::Designate96Charset(const int gsetNumber, const VTID charset)
 {
     return _termOutput.Designate96Charset(gsetNumber, charset);
 }
@@ -1777,7 +1775,7 @@ bool AdaptDispatch::Designate96Charset(const size_t gsetNumber, const VTID chars
 // - gsetNumber - The G-set that will be invoked.
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::LockingShift(const size_t gsetNumber)
+bool AdaptDispatch::LockingShift(const int gsetNumber)
 {
     return _termOutput.LockingShift(gsetNumber);
 }
@@ -1788,7 +1786,7 @@ bool AdaptDispatch::LockingShift(const size_t gsetNumber)
 // - gsetNumber - The G-set that will be invoked.
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::LockingShiftRight(const size_t gsetNumber)
+bool AdaptDispatch::LockingShiftRight(const int gsetNumber)
 {
     return _termOutput.LockingShiftRight(gsetNumber);
 }
@@ -1799,7 +1797,7 @@ bool AdaptDispatch::LockingShiftRight(const size_t gsetNumber)
 // - gsetNumber - The G-set that will be invoked.
 // Return value:
 // True if handled successfully. False otherwise.
-bool AdaptDispatch::SingleShift(const size_t gsetNumber)
+bool AdaptDispatch::SingleShift(const int gsetNumber)
 {
     return _termOutput.SingleShift(gsetNumber);
 }
@@ -1966,7 +1964,7 @@ bool AdaptDispatch::ScreenAlignmentPattern()
     if (success)
     {
         // Fill the screen with the letter E using the default attributes.
-        auto fillPosition = COORD{ 0, csbiex.srWindow.Top };
+        auto fillPosition = til::point{ 0, csbiex.srWindow.Top };
         const auto fillLength = (csbiex.srWindow.Bottom - csbiex.srWindow.Top) * csbiex.dwSize.X;
         success = _pConApi->PrivateFillRegion(fillPosition, fillLength, L'E', false);
         // Reset the line rendition for all of these rows.
@@ -2010,20 +2008,20 @@ bool AdaptDispatch::_EraseScrollback()
     bool success = (_pConApi->GetConsoleScreenBufferInfoEx(csbiex) && _pConApi->MoveToBottom());
     if (success)
     {
-        const SMALL_RECT screen = csbiex.srWindow;
-        const SHORT height = screen.Bottom - screen.Top;
+        const auto screen = til::wrap_small_rect(csbiex.srWindow);
+        const auto height = screen.bottom - screen.top;
         FAIL_FAST_IF(!(height > 0));
-        const COORD cursor = csbiex.dwCursorPosition;
+        const auto cursor = csbiex.dwCursorPosition;
 
         // Rectangle to cut out of the existing buffer
         // It will be clipped to the buffer boundaries so SHORT_MAX gives us the full buffer width.
-        SMALL_RECT scroll = screen;
-        scroll.Left = 0;
-        scroll.Right = SHORT_MAX;
+        auto scroll = screen;
+        scroll.left = 0;
+        scroll.right = SHORT_MAX;
         // Paste coordinate for cut text above
-        COORD destination;
-        destination.X = 0;
-        destination.Y = 0;
+        til::point destination;
+        destination.x = 0;
+        destination.y = 0;
 
         // Typically a scroll operation should fill with standard erase attributes, but in
         // this case we need to use the default attributes, hence standardFillAttrs is false.
@@ -2032,7 +2030,7 @@ bool AdaptDispatch::_EraseScrollback()
         {
             // Clear everything after the viewport.
             const DWORD totalAreaBelow = csbiex.dwSize.X * (csbiex.dwSize.Y - height);
-            const COORD coordBelowStartPosition = { 0, height };
+            const til::point coordBelowStartPosition{ 0, height };
             // Again we need to use the default attributes, hence standardFillAttrs is false.
             success = _pConApi->PrivateFillRegion(coordBelowStartPosition, totalAreaBelow, L' ', false);
             // Also reset the line rendition for all of the cleared rows.
@@ -2041,18 +2039,18 @@ bool AdaptDispatch::_EraseScrollback()
             if (success)
             {
                 // Move the viewport (CAN'T be done in one call with SetConsolescreenBufferInfoEx, because legacy)
-                SMALL_RECT newViewport;
-                newViewport.Left = screen.Left;
-                newViewport.Top = 0;
+                til::inclusive_rect newViewport;
+                newViewport.left = screen.left;
+                newViewport.top = 0;
                 // SetConsoleWindowInfo uses an inclusive rect, while GetConsolescreenBufferInfo is exclusive
-                newViewport.Right = screen.Right - 1;
-                newViewport.Bottom = height - 1;
+                newViewport.right = screen.right - 1;
+                newViewport.bottom = height - 1;
                 success = _pConApi->SetConsoleWindowInfo(true, newViewport);
 
                 if (success)
                 {
                     // Move the cursor to the same relative location.
-                    const COORD newcursor = { cursor.X, cursor.Y - screen.Top };
+                    const til::point newcursor{ cursor.X, cursor.Y - screen.top };
                     success = _pConApi->SetConsoleCursorPosition(newcursor);
                 }
             }
@@ -2413,7 +2411,7 @@ bool AdaptDispatch::DoConEmuAction(const std::wstring_view /*string*/) noexcept
 // - charsetSize - Whether the character set is 94 or 96 characters.
 // Return Value:
 // - a function to receive the pixel data or nullptr if parameters are invalid
-ITermDispatch::StringHandler AdaptDispatch::DownloadDRCS(const size_t fontNumber,
+ITermDispatch::StringHandler AdaptDispatch::DownloadDRCS(const int fontNumber,
                                                          const VTParameter startChar,
                                                          const DispatchTypes::DrcsEraseControl eraseControl,
                                                          const DispatchTypes::DrcsCellMatrix cellMatrix,
@@ -2474,7 +2472,7 @@ ITermDispatch::StringHandler AdaptDispatch::DownloadDRCS(const size_t fontNumber
             const auto bitPattern = _fontBuffer->GetBitPattern();
             const auto cellSize = _fontBuffer->GetCellSize();
             const auto centeringHint = _fontBuffer->GetTextCenteringHint();
-            _pConApi->PrivateUpdateSoftFont(bitPattern, cellSize.to_win32_size(), centeringHint);
+            _pConApi->PrivateUpdateSoftFont(bitPattern, cellSize, centeringHint);
         }
         return true;
     };
@@ -2612,8 +2610,8 @@ void AdaptDispatch::_ReportDECSTBMSetting() const
     csbiex.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
     if (_pConApi->GetConsoleScreenBufferInfoEx(csbiex))
     {
-        auto marginTop = _scrollMargins.Top + 1;
-        auto marginBottom = _scrollMargins.Bottom + 1;
+        auto marginTop = _scrollMargins.top + 1;
+        auto marginBottom = _scrollMargins.bottom + 1;
         // If the margin top is greater than or equal to the bottom, then the
         // margins aren't actually set, so we need to return the full height
         // of the window for the margin range.
